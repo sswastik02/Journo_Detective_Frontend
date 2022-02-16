@@ -1,13 +1,14 @@
+// ignore_for_file: deprecated_member_use, avoid_print
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
-import 'package:arhn_app_2021/util/inner_drawer.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:journo/util/inner_drawer.dart';
 
 class HomePage extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -19,7 +20,7 @@ class HomePage extends StatefulWidget {
 
 Completer<GoogleMapController> mapController = Completer();
 
-String api_url = "interficio.nitdgplug.org";
+String apiUrl = "interficio.herokuapp.com";
 
 bool header = false;
 bool intro = false;
@@ -31,7 +32,7 @@ class _HomePageState extends State<HomePage>
   _HomePageState(this.user);
 
   var currentLocation = LocationData;
-  var location = new Location();
+  var location = Location();
   var accuracy;
   SharedPreferences _sharedPrefs;
   bool _finalAnswerGiven = false;
@@ -80,10 +81,10 @@ class _HomePageState extends State<HomePage>
     });
 
     http.Response response = await http.get(
-        Uri.encodeFull("https://$api_url/api/getlevel/"),
+        Uri.parse("https://$apiUrl/api/getlevel/"),
         headers: {"Authorization": "Token ${user["token"]}"});
     levelData = json.decode(response.body);
-    print(levelData);
+    print("DATA LEVEL DATA : $levelData");
 
     if (levelData["level"] == "ALLDONE")
       clueData = {"data": "finished"};
@@ -91,11 +92,12 @@ class _HomePageState extends State<HomePage>
       levelData["level"] = "More Levels Coming Soon";
       clueData = {"data": "finished"};
     } else {
+      dynamic level = levelData["level_no"];
+      print("LEVELNO:$level");
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString("currentLevel", "${levelData["level_no"]}");
+      prefs.setString("currentLevel", "$level");
       http.Response clues = await http.get(
-          Uri.encodeFull(
-              "https://$api_url/api/getlevelclues/?level_no=${levelData["level_no"]}"),
+          Uri.parse("https://$apiUrl/api/getlevelclues/?level_no=$level"),
           headers: {"Authorization": "Token ${user["token"]}"});
       clueData = json.decode(clues.body);
     }
@@ -112,14 +114,14 @@ class _HomePageState extends State<HomePage>
     });
     print("start");
     http.Response response = await http
-        .get(Uri.encodeFull("https://$api_url/api/getclues/"), headers: {
+        .get(Uri.parse("https://$apiUrl/api/getclues/"), headers: {
       "Authorization": "Token ${user["token"]}",
       "Content-type": "application/json"
     });
     print("done");
 
     unlockedClueData = json.decode(response.body);
-    print(" fdbdfbetne $unlockedClueData");
+    print("DATA unlockedClue $unlockedClueData");
     setState(() {
       _isLoading = false;
     });
@@ -131,12 +133,12 @@ class _HomePageState extends State<HomePage>
     });
     print("main");
     http.Response response = await http
-        .get(Uri.encodeFull("https://$api_url/api/finaltext/"), headers: {
+        .get(Uri.parse("https://$apiUrl/api/finaltext/"), headers: {
       "Authorization": "Token ${user["token"]}",
       "Content-type": "application/json"
     });
     mainQues = json.decode(response.body);
-    print(mainQues);
+    print("DATA Main Questions : $mainQues");
 
     setState(() {
       _isLoading = false;
@@ -148,7 +150,7 @@ class _HomePageState extends State<HomePage>
       _isLoading = true;
     });
     http.Response response = await http.post(
-        Uri.encodeFull("https://$api_url/api/finaltext/"),
+        Uri.parse("https://$apiUrl/api/finaltext/"),
         headers: {
           "Authorization": "Token ${user["token"]}",
           "Content-type": "application/json"
@@ -158,9 +160,9 @@ class _HomePageState extends State<HomePage>
     finalAns = json.decode(response.body);
     if (finalAns["success"] == false)
       _scaffoldKey.currentState.showSnackBar(
-        SnackBar(
-          content: Text("Answer already submitted once"),
-          duration: Duration(seconds: 1),
+        const SnackBar(
+          content: const Text("Answer already submitted once"),
+          duration: const Duration(seconds: 1),
         ),
       );
     // else if (finalAns["success"] == true) {
@@ -180,9 +182,10 @@ class _HomePageState extends State<HomePage>
       _isLoading = true;
     });
     http.Response response = await http.get(
-        Uri.encodeFull("https://$api_url/api/scoreboard/"),
+        Uri.parse("https://$apiUrl/api/scoreboard/"),
         headers: {"Authorization": "Token ${user["token"]}"});
     leaderboard = json.decode(response.body);
+    print("DATA LEADERBOARD $leaderboard");
     setState(() {
       _isLoading = false;
     });
@@ -194,8 +197,8 @@ class _HomePageState extends State<HomePage>
     });
 
     http.Response response = await http.get(
-        Uri.encodeFull(
-            "https://$api_url/api/unlockclue/?level_no=${levelData["level_no"]}&clue_no=$clueNo"),
+        Uri.parse(
+            "https://$apiUrl/api/unlockclue/?level_no=${levelData["level_no"]}&clue_no=$clueNo"),
         headers: {"Authorization": "Token ${user["token"]}"}).then((onValue) {
       getLevelData();
     });
@@ -219,7 +222,7 @@ class _HomePageState extends State<HomePage>
     //   ));
     // } else {
     http.Response response = await http.post(
-      Uri.encodeFull("https://$api_url/api/submit/location/"),
+      Uri.parse("https://$apiUrl/api/submit/location/"),
       headers: {
         "Authorization": "Token ${user["token"]}",
         "Content-Type": "application/json"
@@ -234,7 +237,7 @@ class _HomePageState extends State<HomePage>
 
     _scaffoldKey.currentState.showSnackBar(SnackBar(
       content: Text(data["success"] == true ? "correct location" : "try again"),
-      duration: Duration(seconds: 1),
+      duration: const Duration(seconds: 1),
     ));
     // }
     setState(() {
@@ -269,7 +272,7 @@ class _HomePageState extends State<HomePage>
         // filled: true,
         // fillColor: Colors.white.withOpacity(0.7),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(
+          borderSide: const BorderSide(
             color: Color(0xFF03A062), //Color of the border
             style: BorderStyle.solid, //Style of the border
             width: 1, //width of the border
@@ -277,7 +280,7 @@ class _HomePageState extends State<HomePage>
           borderRadius: BorderRadius.circular(10),
         ),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(
+          borderSide: const BorderSide(
             color: Color(0xFF03A062), //Color of the border
             style: BorderStyle.solid, //Style of the border
             width: 1, //width of the border
@@ -321,12 +324,13 @@ class _HomePageState extends State<HomePage>
       setState(() {
         _sharedPrefs = value;
         _finalAnswerGiven = _sharedPrefs.get("finalAnswerGiven");
+        print("DATA FINAL ANSWER GIVEN : $_finalAnswerGiven");
       });
     });
     getIntro();
     _animationController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
     );
     // getLocation();
     // getMainQuestion();
@@ -369,15 +373,15 @@ class _HomePageState extends State<HomePage>
   Widget drawerClues() {
     return _isLoading
         ? Container(
-            child: CircularProgressIndicator(),
+            child: const CircularProgressIndicator(),
           )
         : Material(
             color: Colors.white.withOpacity(0),
             child: Column(
               children: <Widget>[
                 Container(
-                  padding: EdgeInsets.all(10),
-                  child: Text(
+                  padding: const EdgeInsets.all(10),
+                  child: const Text(
                     "CURRENT CLUES",
                     style: TextStyle(
                         fontFamily: "Mysterious",
@@ -391,16 +395,14 @@ class _HomePageState extends State<HomePage>
                     : Expanded(
                         child: Container(
                           // height: MediaQuery.of(context).size.height / 3,
-                          padding: EdgeInsets.fromLTRB(0, 25, 0, 0),
+                          padding: const EdgeInsets.fromLTRB(0, 25, 0, 0),
                           child: ListView.builder(
-                            physics: ScrollPhysics(),
+                            physics: const ScrollPhysics(),
                             shrinkWrap: true,
-                            itemCount: clueData["data"].length != null
-                                ? clueData["data"].length
-                                : 0,
+                            itemCount: clueData["data"].length ?? 0,
                             itemBuilder: (BuildContext context, int index) {
                               return Container(
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                     color: Color(0xFF000000),
                                     boxShadow: [
                                       BoxShadow(
@@ -416,23 +418,25 @@ class _HomePageState extends State<HomePage>
                                     ],
                                     borderRadius: BorderRadius.only(
                                         topRight: Radius.circular(20),
-                                        bottomRight: Radius.circular(20))),
-                                margin: EdgeInsets.fromLTRB(0, 15, 30, 15),
+                                        bottomRight:
+                                            const Radius.circular(20))),
+                                margin:
+                                    const EdgeInsets.fromLTRB(0, 15, 30, 15),
                                 // padding: EdgeInsets.all(10),
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.only(
+                                  borderRadius: const BorderRadius.only(
                                     topRight: Radius.circular(15.0),
-                                    bottomRight: Radius.circular(15.0),
+                                    bottomRight: const Radius.circular(15.0),
                                   ),
                                   child: ListTile(
                                     tileColor: Colors.white.withOpacity(0.2),
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                         vertical: 5.0, horizontal: 15),
                                     leading: IconButton(
                                       iconSize: 25.0,
                                       color: clueData["data"][index][2] != null
                                           ? Colors.green
-                                          : Color(0xFF03A062),
+                                          : const Color(0xFF03A062),
                                       onPressed: clueData["data"][index][2] ==
                                               null
                                           ? () {
@@ -443,12 +447,15 @@ class _HomePageState extends State<HomePage>
                                                       .withOpacity(0),
                                                   child: Container(
                                                     decoration: BoxDecoration(
-                                                      color: Color(0xFF03A062),
+                                                      color: const Color(
+                                                          0xFF03A062),
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               30),
                                                     ),
-                                                    padding: EdgeInsets.all(15),
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            15),
                                                     height: 150,
                                                     width:
                                                         MediaQuery.of(context)
@@ -459,17 +466,17 @@ class _HomePageState extends State<HomePage>
                                                       children: <Widget>[
                                                         Text(
                                                           "Are you sure you want to unlock this clue?",
-                                                          style: GoogleFonts
-                                                              .josefinSans(
-                                                                  fontSize: 20,
-                                                                  color: Colors
-                                                                      .white),
+                                                          style: TextStyle(
+                                                              fontSize: 20,
+                                                              color:
+                                                                  Colors.white),
                                                         ),
                                                         ButtonBar(
                                                           children: <Widget>[
+                                                            // ignore: deprecated_member_use
                                                             OutlineButton(
                                                               borderSide:
-                                                                  BorderSide(
+                                                                  const BorderSide(
                                                                 color: Colors
                                                                     .white, //Color of the border
                                                                 style: BorderStyle
@@ -479,8 +486,6 @@ class _HomePageState extends State<HomePage>
                                                               ),
                                                               child: Text(
                                                                 "UNLOCK",
-                                                                style: GoogleFonts
-                                                                    .josefinSans(),
                                                               ),
                                                               onPressed: () {
                                                                 setState(() {
@@ -499,7 +504,7 @@ class _HomePageState extends State<HomePage>
                                                             ),
                                                             OutlineButton(
                                                               borderSide:
-                                                                  BorderSide(
+                                                                  const BorderSide(
                                                                 color: Colors
                                                                     .white, //Color of the border
                                                                 style: BorderStyle
@@ -509,8 +514,6 @@ class _HomePageState extends State<HomePage>
                                                               ),
                                                               child: Text(
                                                                 "GO BACK",
-                                                                style: GoogleFonts
-                                                                    .josefinSans(),
                                                               ),
                                                               onPressed: () {
                                                                 Navigator.of(
@@ -541,22 +544,23 @@ class _HomePageState extends State<HomePage>
                                             children: <Widget>[
                                               Text(
                                                 "${clueData["data"][index][1]}",
-                                                style: GoogleFonts.josefinSans(
-                                                    color: Color(0xFF03A062),
+                                                style: TextStyle(
+                                                    color:
+                                                        const Color(0xFF03A062),
                                                     fontSize: 20.0),
                                               ),
                                               Text(
                                                 "${clueData["data"][index][2]}",
-                                                style: GoogleFonts.josefinSans(
+                                                style: TextStyle(
                                                     color: Colors.white,
                                                     fontSize: 20.0),
                                               ),
-                                              SizedBox(
+                                              const SizedBox(
                                                 height: 15.0,
                                               ),
                                               clueData["data"][index][4] != null
                                                   ? Image.network(
-                                                      "https://${api_url}${clueData["data"][index][4]}",
+                                                      "https://${apiUrl}${clueData["data"][index][4]}",
                                                       height: 200.0,
                                                       fit: BoxFit.cover,
                                                     )
@@ -565,8 +569,8 @@ class _HomePageState extends State<HomePage>
                                           )
                                         : Text(
                                             clueData["data"][index][1],
-                                            style: GoogleFonts.josefinSans(
-                                                color: Color(0xFF03A062),
+                                            style: TextStyle(
+                                                color: const Color(0xFF03A062),
                                                 fontSize: 20),
                                           ),
                                   ),
@@ -577,8 +581,8 @@ class _HomePageState extends State<HomePage>
                         ),
                       ),
                 Container(
-                  padding: EdgeInsets.all(10),
-                  child: Text(
+                  padding: const EdgeInsets.all(10),
+                  child: const Text(
                     "UNLOCKED CLUES",
                     style: TextStyle(
                         fontFamily: "Mysterious",
@@ -590,17 +594,17 @@ class _HomePageState extends State<HomePage>
                 Expanded(
                   child: Container(
                     // height: MediaQuery.of(context).size.height / 2.5,
-                    padding: EdgeInsets.fromLTRB(0, 25, 0, 0),
+                    padding: const EdgeInsets.fromLTRB(0, 25, 0, 0),
                     child: ListView.builder(
                         shrinkWrap: true,
-                        physics: ScrollPhysics(),
+                        physics: const ScrollPhysics(),
                         itemCount: unlockedClueData.length != null
                             ? unlockedClueData["data"].length
                             : 0,
                         itemBuilder: (BuildContext context, int index) {
-                          if (unlockedClueData["data"][index][2] != null)
+                          if (unlockedClueData["data"][index][2] != null) {
                             return Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                   color: Color(0xFF000000),
                                   boxShadow: [
                                     BoxShadow(
@@ -617,16 +621,16 @@ class _HomePageState extends State<HomePage>
                                   borderRadius: BorderRadius.only(
                                       topRight: Radius.circular(20),
                                       bottomRight: Radius.circular(20))),
-                              margin: EdgeInsets.fromLTRB(0, 15, 30, 15),
+                              margin: const EdgeInsets.fromLTRB(0, 15, 30, 15),
                               // padding: EdgeInsets.all(10),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.only(
+                                borderRadius: const BorderRadius.only(
                                   topRight: Radius.circular(15.0),
                                   bottomRight: Radius.circular(15.0),
                                 ),
                                 child: ListTile(
                                   tileColor: Colors.white.withOpacity(0.2),
-                                  contentPadding: EdgeInsets.symmetric(
+                                  contentPadding: const EdgeInsets.symmetric(
                                       vertical: 5.0, horizontal: 15),
                                   // leading: IconButton(
                                   //   color: Color(0xFFa94064),
@@ -639,21 +643,21 @@ class _HomePageState extends State<HomePage>
                                     children: <Widget>[
                                       Text(
                                         "${unlockedClueData["data"][index][1]} \n",
-                                        style: GoogleFonts.josefinSans(
-                                            color: Color(0xFF03A062),
+                                        style: TextStyle(
+                                            color: const Color(0xFF03A062),
                                             fontSize: 20),
                                       ),
                                       Text(
                                         "${unlockedClueData["data"][index][2]}",
-                                        style: GoogleFonts.josefinSans(
+                                        style: TextStyle(
                                             color: Colors.white, fontSize: 17),
                                       ),
-                                      SizedBox(
+                                      const SizedBox(
                                         height: 15.0,
                                       ),
                                       unlockedClueData["data"][index][4] != null
                                           ? Image.network(
-                                              "https://${api_url}${unlockedClueData["data"][index][4]}",
+                                              "https://${apiUrl}${unlockedClueData["data"][index][4]}",
                                               height: 200.0,
                                               fit: BoxFit.cover,
                                             )
@@ -663,7 +667,7 @@ class _HomePageState extends State<HomePage>
                                 ),
                               ),
                             );
-                          else
+                          } else
                             return Container();
                         }),
                   ),
@@ -697,15 +701,15 @@ class _HomePageState extends State<HomePage>
               )
             : Scaffold(
                 body: Container(
-                  padding: EdgeInsets.all(30),
-                  decoration: BoxDecoration(
+                  padding: const EdgeInsets.all(30),
+                  decoration: const BoxDecoration(
                     color: Color(0xFF000000),
                   ),
                   child: Center(
                     child: SafeArea(
                       child: ListView(
                         children: <Widget>[
-                          Center(
+                          const Center(
                             child: Text(
                               "The Mystery",
                               style: TextStyle(
@@ -714,21 +718,20 @@ class _HomePageState extends State<HomePage>
                                   fontSize: 50),
                             ),
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 30,
                           ),
                           Text(
                             mainQues["data"],
-                            style: GoogleFonts.josefinSans(
-                                color: Colors.white, fontSize: 27),
+                            style: TextStyle(color: Colors.white, fontSize: 27),
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 30,
                           ),
                           FlatButton(
-                            padding: EdgeInsets.symmetric(vertical: 10.0),
-                            color: Color(0xFF03A062),
-                            child: Text(
+                            padding: const EdgeInsets.symmetric(vertical: 10.0),
+                            color: const Color(0xFF03A062),
+                            child: const Text(
                               "Proceed",
                               style: TextStyle(
                                 fontFamily: 'Mysterious',
@@ -749,8 +752,9 @@ class _HomePageState extends State<HomePage>
                 ),
               )
         : WillPopScope(
+            // ignore: missing_return
             onWillPop: () {
-              SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+              SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
                   statusBarColor: Colors.transparent,
                   statusBarIconBrightness: Brightness.light,
                   systemNavigationBarIconBrightness: Brightness.dark));
@@ -761,7 +765,8 @@ class _HomePageState extends State<HomePage>
                 key: _innerDrawerKey,
                 onTapClose: true, // default false
                 swipe: true, // default true
-                colorTransition: Color(0xFF87ceeb), // default Color.black54
+                colorTransition:
+                    const Color(0xFF87ceeb), // default Color.black54
 
                 // DEPRECATED: use offset
                 leftOffset: 0.3, // Will be removed in 0.6.0 version
@@ -785,7 +790,7 @@ class _HomePageState extends State<HomePage>
 
                 // Color(0xFFa94064).withOpacity(0.8),
                 // Color(0xFF191970).withOpacity(0.7)
-                backgroundColor: Color(0xFF000000),
+                backgroundColor: const Color(0xFF000000),
 
                 onDragUpdate: (double val, InnerDrawerDirection direction) {
                   print(val);
@@ -807,9 +812,9 @@ class _HomePageState extends State<HomePage>
                   // drawer: AppBar(automaticallyImplyLeading: false,),
                   body: Stack(
                     children: <Widget>[
-                      GameMap(),
+                      const GameMap(),
                       Padding(
-                        padding: EdgeInsets.all(15),
+                        padding: const EdgeInsets.all(15),
                         child: IconButton(
                           iconSize: 35,
                           onPressed: () {
@@ -830,15 +835,15 @@ class _HomePageState extends State<HomePage>
                         right: 0.0,
                         left: 0.0,
                         top: -15.0,
-                        duration: Duration(milliseconds: 900),
+                        duration: const Duration(milliseconds: 900),
                         curve: Curves.easeOutQuart,
                         child: Center(
                           child: AnimatedOpacity(
-                            duration: Duration(milliseconds: 900),
+                            duration: const Duration(milliseconds: 900),
                             curve: Curves.easeOutQuart,
                             opacity: _isUp ? 0.5 : 0.8,
                             child: Container(
-                              padding: EdgeInsets.all(20),
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: Colors.black.withOpacity(0.9),
                                 // boxShadow: [
@@ -861,45 +866,44 @@ class _HomePageState extends State<HomePage>
                                 borderRadius: BorderRadius.circular(17),
                               ),
                               child: Container(
-                                padding: EdgeInsets.fromLTRB(10, 25, 10, 10),
+                                padding:
+                                    const EdgeInsets.fromLTRB(10, 25, 10, 10),
                                 alignment: Alignment.topLeft,
                                 child: ListView(
                                   children: <Widget>[
-                                    Text(
+                                    const Text(
                                       "INSTRUCTIONS",
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                           fontFamily: 'Mysterious',
                                           color: Color(0xFF03A062),
                                           fontSize: 40,
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    SizedBox(
+                                    const SizedBox(
                                       height: 15,
                                     ),
                                     Text(
                                       "The rules of Journo Detective are as follows: \n\n\n 1) Participants need to solve a murder mystery with the help of an available storyline and clues provided to them.\n\n 2) Each level comprises of a clue to the next location at which the participant can move to the next level. The location can be selected by tapping on the corresponding region on the map, following which a Marker is placed there. Once the Marker is placed, click on submit. If you are at the right location, you progress to the next level.\n\n 3) At every level, there will be a set of clues. You can unlock clues as you desire at a particular location.\n\n 4) A clue that has not been unlocked cannot be unlocked once you pass that level.\n\n 5) The final level requires you to write the name of the criminal with a justification for the same.\n\n 6) The dynamic scoreboard will be based on the level a participant is at and the time he/she takes to reach there.\n\n 7) The final standing will be subjected to three parameters: The correct answer and justification, time taken and number of clues unlocked to come to a conclusion.",
-                                      style:
-                                          GoogleFonts.josefinSans(fontSize: 17),
+                                      style: TextStyle(fontSize: 17),
                                     ),
-                                    SizedBox(
+                                    const SizedBox(
                                       height: 15,
                                     ),
-                                    Text(
+                                    const Text(
                                       "The Mystery",
                                       style: TextStyle(
                                           fontFamily: 'Mysterious',
                                           color: Colors.red,
                                           fontSize: 32.0),
                                     ),
-                                    SizedBox(
+                                    const SizedBox(
                                       height: 5,
                                     ),
                                     _isLoading
                                         ? Container()
                                         : Text(
                                             mainQues["data"],
-                                            style: GoogleFonts.josefinSans(
-                                                fontSize: 19),
+                                            style: TextStyle(fontSize: 19),
                                           ),
                                   ],
                                 ),
@@ -914,11 +918,11 @@ class _HomePageState extends State<HomePage>
                         right: 10.0,
                         left: 10.0,
                         top: top,
-                        duration: Duration(milliseconds: 900),
+                        duration: const Duration(milliseconds: 900),
                         curve: Curves.bounceOut,
                         child: Center(
                           child: AnimatedOpacity(
-                            duration: Duration(milliseconds: 900),
+                            duration: const Duration(milliseconds: 900),
                             curve: Curves.easeOutQuart,
                             opacity: _isUp ? (_isOpen ? 1 : 0.8) : 0.0,
                             child: GestureDetector(
@@ -928,7 +932,7 @@ class _HomePageState extends State<HomePage>
                                 });
                               },
                               child: Container(
-                                padding: EdgeInsets.all(20),
+                                padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(
                                   boxShadow: [
                                     BoxShadow(
@@ -937,7 +941,7 @@ class _HomePageState extends State<HomePage>
                                         blurRadius: 10,
                                         spreadRadius: 5),
                                   ],
-                                  color: Color(0xFF000000),
+                                  color: const Color(0xFF000000),
                                   borderRadius: BorderRadius.circular(17),
                                 ),
                                 child: Stack(
@@ -948,13 +952,13 @@ class _HomePageState extends State<HomePage>
                                       right: 0.0,
                                       child: _isLoading
                                           ? Container(
-                                              padding:
-                                                  EdgeInsets.only(right: 20),
-                                              child: Center(
+                                              padding: const EdgeInsets.only(
+                                                  right: 20),
+                                              child: const Center(
                                                   child:
                                                       CircularProgressIndicator()))
                                           : levelData["level"] == "ALLDONE"
-                                              ? Center(
+                                              ? const Center(
                                                   child: Text(
                                                     "Solve the mystery",
                                                     style: TextStyle(
@@ -967,7 +971,7 @@ class _HomePageState extends State<HomePage>
                                                 )
                                               : levelData["level"] ==
                                                       "More Levels Coming Soon"
-                                                  ? Center(
+                                                  ? const Center(
                                                       child: Text(
                                                           "More Levels Coming Soon"))
                                                   : Column(
@@ -985,7 +989,7 @@ class _HomePageState extends State<HomePage>
                                                               fontFamily:
                                                                   'Mysterious',
                                                               color: _isOpen
-                                                                  ? Color(
+                                                                  ? const Color(
                                                                       0xFF03A062)
                                                                   : Colors
                                                                       .white,
@@ -996,17 +1000,16 @@ class _HomePageState extends State<HomePage>
                                                             ),
                                                           ),
                                                         ),
-                                                        SizedBox(
+                                                        const SizedBox(
                                                           height: 15,
                                                         ),
                                                         Text(
                                                           "Level: ${levelData["level_no"]}",
-                                                          style: GoogleFonts
-                                                              .josefinSans(
+                                                          style: TextStyle(
                                                             color: _isOpen
-                                                                ? Color(
+                                                                ? const Color(
                                                                     0xFFa94064)
-                                                                : Color(
+                                                                : const Color(
                                                                     0xFFa94064),
                                                             fontSize: 17,
                                                             fontWeight:
@@ -1036,231 +1039,229 @@ class _HomePageState extends State<HomePage>
                               bottom: _isOpen && _isUp ? 75.0 : -5.0,
                               left: 20.0,
                               right: 20.0,
-                              duration: Duration(milliseconds: 900),
+                              duration: const Duration(milliseconds: 900),
                               curve: Curves.easeOutQuart,
                               child: GestureDetector(
                                 onTap: () {
                                   FocusScope.of(context)
-                                      .requestFocus(new FocusNode());
+                                      .requestFocus(FocusNode());
                                 },
-                                child: Container(
-                                  child: Center(
-                                    child: ScrollConfiguration(
-                                      behavior: MyBehavior(),
-                                      child: levelData["level"] == "ALLDONE"
-                                          ? ListView(
-                                              children: <Widget>[
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Color(0xFF03A062),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20),
-                                                  ),
-                                                  padding: EdgeInsets.symmetric(
-                                                      vertical: 7,
-                                                      horizontal: 15),
-                                                  margin: EdgeInsets.symmetric(
-                                                      vertical: 10,
-                                                      horizontal: 10),
-                                                  child: Text(
-                                                    mainQues["data"],
-                                                    style:
-                                                        GoogleFonts.josefinSans(
-                                                            color: _isOpen
-                                                                ? Colors.white
-                                                                : Colors.white,
-                                                            fontSize: 17,
-                                                            fontStyle: FontStyle
-                                                                .italic),
-                                                  ),
+                                child: Center(
+                                  child: ScrollConfiguration(
+                                    behavior: MyBehavior(),
+                                    child: levelData["level"] == "ALLDONE"
+                                        ? ListView(
+                                            children: <Widget>[
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xFF03A062),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
                                                 ),
-                                                _finalAnswerGiven != null &&
-                                                        _finalAnswerGiven
-                                                    ? Container()
-                                                    : _answerTextField(),
-                                                SizedBox(
-                                                  height: 10,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 7,
+                                                        horizontal: 15),
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 10,
+                                                        horizontal: 10),
+                                                child: Text(
+                                                  mainQues["data"],
+                                                  style: TextStyle(
+                                                      color: _isOpen
+                                                          ? Colors.white
+                                                          : Colors.white,
+                                                      fontSize: 17,
+                                                      fontStyle:
+                                                          FontStyle.italic),
                                                 ),
-                                                _finalAnswerGiven != null &&
-                                                        _finalAnswerGiven
-                                                    ? Center(
-                                                        child: Container(
-                                                          child: Text(
-                                                            "Final Answer Submitted",
-                                                            style: GoogleFonts
-                                                                .josefinSans(
-                                                              fontSize: 22.0,
-                                                            ),
+                                              ),
+                                              _finalAnswerGiven != null &&
+                                                      _finalAnswerGiven
+                                                  ? Container()
+                                                  : _answerTextField(),
+                                              const SizedBox(
+                                                height: 10,
+                                              ),
+                                              _finalAnswerGiven != null &&
+                                                      _finalAnswerGiven
+                                                  ? Center(
+                                                      child: Container(
+                                                        child: Text(
+                                                          "Final Answer Submitted",
+                                                          style: TextStyle(
+                                                            fontSize: 22.0,
                                                           ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : OutlineButton(
+                                                      borderSide:
+                                                          const BorderSide(
+                                                        color: Color(
+                                                            0xFFa94064), //Color of the border
+                                                        style: BorderStyle
+                                                            .solid, //Style of the border
+                                                        width:
+                                                            1, //width of the border
+                                                      ),
+                                                      color: const Color(
+                                                          0xFF0059B3),
+                                                      child: const Text(
+                                                        "SUBMIT ANSWER",
+                                                        style: TextStyle(
+                                                          fontFamily:
+                                                              'Mysterious',
+                                                          // fontWeight:
+                                                          //     FontWeight.bold,
+                                                          fontSize: 20.0,
+                                                        ),
+                                                      ),
+                                                      onPressed: () {
+                                                        submitFinalAnswer(
+                                                            _answerFieldController
+                                                                .value.text);
+                                                        _answerFieldController
+                                                            .clear();
+                                                      },
+                                                    ),
+                                            ],
+                                          )
+                                        : ListView(
+                                            children: <Widget>[
+                                              Container(
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xFF03A062),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 7,
+                                                        horizontal: 15),
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 5,
+                                                        horizontal: 10),
+                                                child: Text(
+                                                  '${levelData["ques"]}',
+                                                  style: TextStyle(
+                                                      color: _isOpen
+                                                          ? Colors.white
+                                                          : Colors.white,
+                                                      fontSize: 17,
+                                                      fontStyle:
+                                                          FontStyle.italic),
+                                                ),
+                                              ),
+                                              ListTile(
+                                                // title: levelData["map_hint"]
+                                                //     ?
+                                                title: Center(
+                                                  child: Column(
+                                                    children: <Widget>[
+                                                      const SizedBox(
+                                                        height: 20,
+                                                      ),
+                                                      const Text(
+                                                        "YOUR CURRENT LOCATION",
+                                                        style: TextStyle(
+                                                          fontFamily:
+                                                              'Mysterious',
+                                                          color: Colors.white,
+                                                          fontSize: 28,
+                                                          // fontWeight:
+                                                          //     FontWeight
+                                                          //         .bold,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 20,
+                                                      ),
+                                                      ListTile(
+                                                        leading: const Icon(Icons
+                                                            .subdirectory_arrow_left),
+                                                        title: Text(
+                                                          "LATITUDE:  ${lat.value == 0.0 ? 'None' : lat.value.toStringAsFixed(8)}°N",
+                                                        ),
+                                                      ),
+                                                      ListTile(
+                                                        leading: const Icon(Icons
+                                                            .subdirectory_arrow_right),
+                                                        title: Text(
+                                                          "LONGITUDE: ${long.value == 0.0 ? 'None' : long.value.toStringAsFixed(8)}°E",
+                                                          style: TextStyle(),
                                                         ),
                                                       )
-                                                    : OutlineButton(
-                                                        borderSide: BorderSide(
-                                                          color: Color(
-                                                              0xFFa94064), //Color of the border
-                                                          style: BorderStyle
-                                                              .solid, //Style of the border
-                                                          width:
-                                                              1, //width of the border
-                                                        ),
-                                                        color:
-                                                            Color(0xFF0059B3),
-                                                        child: Text(
-                                                          "SUBMIT ANSWER",
-                                                          style: TextStyle(
-                                                            fontFamily:
-                                                                'Mysterious',
-                                                            // fontWeight:
-                                                            //     FontWeight.bold,
-                                                            fontSize: 20.0,
-                                                          ),
-                                                        ),
-                                                        onPressed: () {
-                                                          submitFinalAnswer(
-                                                              _answerFieldController
-                                                                  .value.text);
-                                                          _answerFieldController
-                                                              .clear();
-                                                        },
-                                                      ),
-                                              ],
-                                            )
-                                          : ListView(
-                                              children: <Widget>[
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Color(0xFF03A062),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20),
-                                                  ),
-                                                  padding: EdgeInsets.symmetric(
-                                                      vertical: 7,
-                                                      horizontal: 15),
-                                                  margin: EdgeInsets.symmetric(
-                                                      vertical: 5,
-                                                      horizontal: 10),
-                                                  child: Text(
-                                                    '${levelData["ques"]}',
-                                                    style:
-                                                        GoogleFonts.josefinSans(
-                                                            color: _isOpen
-                                                                ? Colors.white
-                                                                : Colors.white,
-                                                            fontSize: 17,
-                                                            fontStyle: FontStyle
-                                                                .italic),
+                                                    ],
                                                   ),
                                                 ),
-                                                ListTile(
-                                                  // title: levelData["map_hint"]
-                                                  //     ?
-                                                  title: Container(
-                                                    child: Center(
-                                                      child: Column(
-                                                        children: <Widget>[
-                                                          SizedBox(
-                                                            height: 20,
-                                                          ),
-                                                          Text(
-                                                            "YOUR CURRENT LOCATION",
-                                                            style: TextStyle(
-                                                              fontFamily:
-                                                                  'Mysterious',
-                                                              color:
-                                                                  Colors.white,
-                                                              fontSize: 28,
-                                                              // fontWeight:
-                                                              //     FontWeight
-                                                              //         .bold,
-                                                            ),
-                                                          ),
-                                                          SizedBox(
-                                                            height: 20,
-                                                          ),
-                                                          ListTile(
-                                                            leading: Icon(Icons
-                                                                .subdirectory_arrow_left),
-                                                            title: Text(
-                                                                "LATITUDE: ${lat.value == 0.0 ? 'None' : lat.value}",
-                                                                style: GoogleFonts
-                                                                    .josefinSans()),
-                                                          ),
-                                                          ListTile(
-                                                            leading: Icon(Icons
-                                                                .subdirectory_arrow_right),
-                                                            title: Text(
-                                                              "LONGITUDE: ${long.value == 0.0 ? 'None' : long.value}",
-                                                              style: GoogleFonts
-                                                                  .josefinSans(),
-                                                            ),
-                                                          )
-                                                        ],
+                                              ),
+                                              ButtonBar(
+                                                alignment: MainAxisAlignment
+                                                    .spaceEvenly,
+                                                children: [
+                                                  OutlineButton(
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: Color(
+                                                          0xFF03A062), //Color of the border
+                                                      style: BorderStyle
+                                                          .solid, //Style of the border
+                                                      width:
+                                                          1, //width of the border
+                                                    ),
+                                                    color:
+                                                        const Color(0xFF03A062),
+                                                    child: const Text(
+                                                      "GET CLUES",
+                                                      style: TextStyle(
+                                                        fontFamily:
+                                                            'Mysterious',
+                                                        // fontWeight:
+                                                        //     FontWeight.bold,
+                                                        fontSize: 22.0,
                                                       ),
                                                     ),
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        _toggle();
+                                                      });
+                                                    },
                                                   ),
-                                                ),
-                                                ButtonBar(
-                                                  alignment: MainAxisAlignment
-                                                      .spaceEvenly,
-                                                  children: [
-                                                    OutlineButton(
-                                                      borderSide: BorderSide(
-                                                        color: Color(
-                                                            0xFF03A062), //Color of the border
-                                                        style: BorderStyle
-                                                            .solid, //Style of the border
-                                                        width:
-                                                            1, //width of the border
-                                                      ),
-                                                      color: Color(0xFF03A062),
-                                                      child: Text(
-                                                        "GET CLUES",
-                                                        style: TextStyle(
-                                                          fontFamily:
-                                                              'Mysterious',
-                                                          // fontWeight:
-                                                          //     FontWeight.bold,
-                                                          fontSize: 22.0,
-                                                        ),
-                                                      ),
-                                                      onPressed: () {
-                                                        setState(() {
-                                                          _toggle();
-                                                        });
-                                                      },
+                                                  OutlineButton(
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: Color(
+                                                          0xFF03A062), //Color of the border
+                                                      style: BorderStyle
+                                                          .solid, //Style of the border
+                                                      width:
+                                                          1, //width of the border
                                                     ),
-                                                    OutlineButton(
-                                                      borderSide: BorderSide(
-                                                        color: Color(
-                                                            0xFF03A062), //Color of the border
-                                                        style: BorderStyle
-                                                            .solid, //Style of the border
-                                                        width:
-                                                            1, //width of the border
+                                                    child: const Text(
+                                                      "SUBMIT",
+                                                      style: TextStyle(
+                                                        fontFamily:
+                                                            'Mysterious',
+                                                        // fontWeight:
+                                                        //     FontWeight.bold,
+                                                        fontSize: 22.0,
                                                       ),
-                                                      child: Text(
-                                                        "SUBMIT",
-                                                        style: TextStyle(
-                                                          fontFamily:
-                                                              'Mysterious',
-                                                          // fontWeight:
-                                                          //     FontWeight.bold,
-                                                          fontSize: 22.0,
-                                                        ),
-                                                      ),
-                                                      onPressed: () {
-                                                        setState(() {
-                                                          submitLocation();
-                                                        });
-                                                      },
                                                     ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                    ),
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        submitLocation();
+                                                      });
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                   ),
                                 ),
                               ),
@@ -1271,11 +1272,11 @@ class _HomePageState extends State<HomePage>
                         right: 0.0,
                         left: 0.0,
                         top: top2,
-                        duration: Duration(milliseconds: 900),
+                        duration: const Duration(milliseconds: 900),
                         curve: Curves.easeOutQuart,
                         child: Center(
                           child: AnimatedOpacity(
-                            duration: Duration(milliseconds: 900),
+                            duration: const Duration(milliseconds: 900),
                             curve: Curves.easeOutQuart,
                             opacity: _isUp ? 0.8 : 1,
                             child: GestureDetector(
@@ -1294,7 +1295,7 @@ class _HomePageState extends State<HomePage>
                                 });
                               },
                               child: Container(
-                                padding: EdgeInsets.symmetric(
+                                padding: const EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 20),
                                 decoration: BoxDecoration(
                                   boxShadow: [
@@ -1304,7 +1305,8 @@ class _HomePageState extends State<HomePage>
                                         blurRadius: 10,
                                         spreadRadius: 5),
                                   ],
-                                  color: Color(0xFF000000).withOpacity(0.7),
+                                  color:
+                                      const Color(0xFF000000).withOpacity(0.7),
                                   // gradient: LinearGradient(
                                   //   begin: Alignment.topCenter,
                                   //   end: Alignment.bottomCenter,
@@ -1334,7 +1336,7 @@ class _HomePageState extends State<HomePage>
                                             fontSize: 36.0,
                                             color: _isUp
                                                 ? Colors.white
-                                                : Color(0xFF03A062),
+                                                : const Color(0xFF03A062),
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -1346,7 +1348,7 @@ class _HomePageState extends State<HomePage>
                                         child: Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
-                                          children: <Widget>[
+                                          children: const <Widget>[
                                             // SizedBox(width: 40),
                                             Text(
                                               "Name",
@@ -1378,17 +1380,17 @@ class _HomePageState extends State<HomePage>
                                             children: <Widget>[
                                               Text(
                                                 "${index - 1}",
-                                                style: GoogleFonts.josefinSans(
+                                                style: TextStyle(
                                                     fontSize: 23,
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
-                                              SizedBox(
+                                              const SizedBox(
                                                 width: 20,
                                               ),
                                               Text(
                                                 leaderboard[index - 2]["name"],
-                                                style: GoogleFonts.josefinSans(
+                                                style: TextStyle(
                                                     fontSize: 23,
                                                     fontWeight:
                                                         FontWeight.bold),
@@ -1397,7 +1399,7 @@ class _HomePageState extends State<HomePage>
                                           ),
                                           Text(
                                             "${leaderboard[index - 2]["current_level"]}",
-                                            style: GoogleFonts.josefinSans(
+                                            style: TextStyle(
                                                 fontSize: 23,
                                                 fontWeight: FontWeight.bold),
                                           ),
@@ -1464,7 +1466,7 @@ class _HomePageState extends State<HomePage>
                         top: 25.0,
                         right: 15.0,
                         child: Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 8.0, vertical: 2.5),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.3),
@@ -1489,13 +1491,13 @@ class _HomePageState extends State<HomePage>
                                 //     getScoreboard();
                                 //   });
                                 // },
-                                child: Icon(
+                                child: const Icon(
                                   Icons.info,
                                   color: Colors.white,
                                   size: 40,
                                 ),
                               ),
-                              SizedBox(
+                              const SizedBox(
                                 height: 20.0,
                               ),
                               GestureDetector(
@@ -1513,7 +1515,7 @@ class _HomePageState extends State<HomePage>
                                 //     getScoreboard();
                                 //   });
                                 // },
-                                child: Icon(
+                                child: const Icon(
                                   Icons.assessment,
                                   color: Colors.white,
                                   size: 40,
@@ -1533,29 +1535,42 @@ class _HomePageState extends State<HomePage>
 }
 
 class GameMap extends StatefulWidget {
+  const GameMap({Key key}) : super(key: key);
+
   @override
   _GameMapState createState() => _GameMapState();
 }
 
 class _GameMapState extends State<GameMap> {
-  List _markers = [
-    Marker(
-      markerId: MarkerId(
-        "start",
-      ),
-      position: LatLng(21.1458, 79.0882),
-      infoWindow: InfoWindow(title: "Your Virtual Location"),
-    ),
-  ];
-  String _val;
+  BitmapDescriptor pinLocationIcon;
+  final List _markers = [];
+
+  @override
+  void initState() {
+    BitmapDescriptor.fromAssetImage(
+            ImageConfiguration(devicePixelRatio: 2.5), 'assets/detective.png')
+        .then((pin) {
+      pinLocationIcon = pin;
+      _markers.add(
+        Marker(
+            markerId: MarkerId(
+              "start",
+            ),
+            position: LatLng(39.8283, -98.5795),
+            infoWindow: InfoWindow(title: "${39.8283}°N,  ${-98.5795}°E"),
+            icon: pin),
+      );
+    });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GoogleMap(
       myLocationButtonEnabled: true,
-      initialCameraPosition: CameraPosition(
-        target: LatLng(20.5937, 78.9629),
-        zoom: 4,
+      initialCameraPosition: const CameraPosition(
+        target: LatLng(39.8283, -98.5795),
+        zoom: 2,
       ),
       markers: Set.from(_markers),
       onTap: _handleTap,
@@ -1580,18 +1595,20 @@ class _GameMapState extends State<GameMap> {
   }
 
   void _handleTap(LatLng point) {
-    if (_markers.length != 0) _markers.removeLast();
+    if (_markers.isNotEmpty) _markers.removeLast();
     setState(() {
       lat.value = point.latitude;
       long.value = point.longitude;
       _markers.add(
         Marker(
-          markerId: MarkerId(
-            point.toString(),
-          ),
-          position: point,
-          infoWindow: InfoWindow(title: "Your Virtual Location"),
-        ),
+            markerId: MarkerId(
+              point.toString(),
+            ),
+            position: point,
+            infoWindow: InfoWindow(
+                title:
+                    "${point.latitude.toStringAsFixed(3)}°N,  ${point.longitude.toStringAsFixed(3)}°E"),
+            icon: pinLocationIcon),
       );
     });
   }

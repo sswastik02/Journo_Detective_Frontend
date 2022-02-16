@@ -1,4 +1,3 @@
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,12 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import './pages/home_page.dart';
 import './pages/authentication.dart';
 
-class MyApp extends StatefulWidget {
+class Interfecio extends StatefulWidget {
+  const Interfecio({Key key}) : super(key: key);
+
   @override
   _MyAppState createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<Interfecio> {
   Map<String, dynamic> user = {
     "name": "",
     "username": "",
@@ -30,7 +31,7 @@ class _MyAppState extends State<MyApp> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     // prefs.clear(); //remove this to save user data
     var _token = prefs.getString("token");
-    print(_token);
+    print("TOKEN : $_token");
     if (_token != null) {
       setState(() {
         user["isAuthenticated"] = true;
@@ -53,15 +54,13 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  final FirebaseDatabase _database = FirebaseDatabase.instance;
-  DatabaseReference _databaseReference;
   bool comingsoon = false;
 
   @override
   void initState() {
     autoAuthenticate();
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         systemNavigationBarIconBrightness: Brightness.dark));
   }
@@ -79,9 +78,9 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       //debugShowMaterialGrid: true,
       theme: ThemeData(
-          brightness: Brightness.dark,
-          primaryColor: Colors.red,
-          accentColor: Colors.green),
+        brightness: Brightness.dark,
+        primaryColor: Colors.red,
+      ),
       routes: {
         "/": (BuildContext context) => _isLoading
             ? Container()

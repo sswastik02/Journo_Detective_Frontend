@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,22 +27,7 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
-  FirebaseDatabase database = FirebaseDatabase.instance;
-  DatabaseReference ref;
-  String backgroundImg;
   @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    ref = database.reference();
-    ref.child("jd_poster").once().then((DataSnapshot snapshot) {
-      print(snapshot.value);
-      setState(() {
-        backgroundImg = snapshot.value;
-      });
-    });
-  }
-
   final Map<String, dynamic> _loginFormData = {
     "username": null,
     "password": null,
@@ -59,7 +42,7 @@ class _AuthPageState extends State<AuthPage> {
 
   bool _isLoading = false;
 
-  String api_url = "interficio.nitdgplug.org";
+  String api_url = "interficio.herokuapp.com";
 
   AuthMode _authmode = AuthMode.login;
 
@@ -75,7 +58,7 @@ class _AuthPageState extends State<AuthPage> {
     });
     print(_loginFormData);
     http.Response response = await http.post(
-        Uri.encodeFull("https://$api_url/api/auth/login/"),
+        Uri.parse("https://$api_url/api/auth/login/"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(_loginFormData));
     print("sgrgeg${response.body}");
@@ -128,7 +111,7 @@ class _AuthPageState extends State<AuthPage> {
       _isLoading = true;
     });
     http.Response response = await http.post(
-        Uri.encodeFull("https://$api_url/api/auth/register/"),
+        Uri.parse("https://$api_url/api/auth/register/"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(_registerFormData));
     var data = json.decode(response.body);
@@ -324,11 +307,9 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   DecorationImage _buildBackgroundImage() {
-    return DecorationImage(
+    return const DecorationImage(
       fit: BoxFit.cover,
-      image: backgroundImg == null
-          ? AssetImage('assets/JournoDetective.jpg')
-          : NetworkImage(backgroundImg),
+      image: AssetImage('assets/JournoDetective.jpg'),
     );
   }
 
