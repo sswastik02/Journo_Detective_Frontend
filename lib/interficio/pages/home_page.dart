@@ -100,6 +100,7 @@ class _HomePageState extends State<HomePage>
           Uri.parse("https://$apiUrl/api/getlevelclues/?level_no=$level"),
           headers: {"Authorization": "Token ${user["token"]}"});
       clueData = json.decode(clues.body);
+      print("DATA cluesData: $clueData");
     }
 
     print(clueData);
@@ -464,7 +465,7 @@ class _HomePageState extends State<HomePage>
                                                             1.5,
                                                     child: Column(
                                                       children: <Widget>[
-                                                        Text(
+                                                        const Text(
                                                           "Are you sure you want to unlock this clue?",
                                                           style: TextStyle(
                                                               fontSize: 20,
@@ -1185,14 +1186,14 @@ class _HomePageState extends State<HomePage>
                                                         leading: const Icon(Icons
                                                             .subdirectory_arrow_left),
                                                         title: Text(
-                                                          "LATITUDE:  ${lat.value == 0.0 ? 'None' : lat.value.toStringAsFixed(8)}°N",
+                                                          "LATITUDE:  ${lat.value == 0.0 ? 'None' : lat.value.toStringAsFixed(8) + ' °N'}",
                                                         ),
                                                       ),
                                                       ListTile(
                                                         leading: const Icon(Icons
                                                             .subdirectory_arrow_right),
                                                         title: Text(
-                                                          "LONGITUDE: ${long.value == 0.0 ? 'None' : long.value.toStringAsFixed(8)}°E",
+                                                          "LONGITUDE: ${long.value == 0.0 ? 'None' : long.value.toStringAsFixed(8) + ' °E'}",
                                                           style: TextStyle(),
                                                         ),
                                                       )
@@ -1544,7 +1545,8 @@ class GameMap extends StatefulWidget {
 class _GameMapState extends State<GameMap> {
   BitmapDescriptor pinLocationIcon;
   final List _markers = [];
-
+  final LatLng initialPosition = const LatLng(39.8283, -98.5795);
+  LatLng currentPosition = const LatLng(39.8283, -98.5795);
   @override
   void initState() {
     BitmapDescriptor.fromAssetImage(
@@ -1556,8 +1558,11 @@ class _GameMapState extends State<GameMap> {
             markerId: MarkerId(
               "start",
             ),
-            position: LatLng(39.8283, -98.5795),
-            infoWindow: InfoWindow(title: "${39.8283}°N,  ${-98.5795}°E"),
+            position: initialPosition,
+            consumeTapEvents: true,
+            infoWindow: InfoWindow(
+                title:
+                    "${initialPosition.latitude}°N,  ${initialPosition.longitude}°E"),
             icon: pin),
       );
     });
@@ -1566,18 +1571,74 @@ class _GameMapState extends State<GameMap> {
 
   @override
   Widget build(BuildContext context) {
-    return GoogleMap(
-      myLocationButtonEnabled: true,
-      initialCameraPosition: const CameraPosition(
-        target: LatLng(39.8283, -98.5795),
-        zoom: 2,
-      ),
-      markers: Set.from(_markers),
-      onTap: _handleTap,
-      onMapCreated: _onMapCreated,
-      myLocationEnabled: false,
-      compassEnabled: false,
-      zoomControlsEnabled: false,
+    return Stack(
+      children: [
+        GoogleMap(
+          myLocationButtonEnabled: true,
+          initialCameraPosition: CameraPosition(
+            target: initialPosition,
+            zoom: 3.5,
+          ),
+          markers: Set.from(_markers),
+          onMapCreated: _onMapCreated,
+          myLocationEnabled: false,
+          compassEnabled: false,
+          zoomControlsEnabled: false,
+          onCameraMove: (position) {
+            setState(() {
+              currentPosition = position.target;
+              _handleTap(position.target);
+            });
+          },
+        ),
+        Positioned(
+          width: 0.5 * MediaQuery.of(context).size.width,
+          height: 0.15 * MediaQuery.of(context).size.width,
+          left: 0.25 * (MediaQuery.of(context).size.width),
+          top: 0.1 * (MediaQuery.of(context).size.height),
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                  0.15 * MediaQuery.of(context).size.width),
+            ),
+            color: Colors.black.withOpacity(0.5),
+            child: Center(
+              child: FittedBox(
+                child: Text(
+                  "${currentPosition.latitude.toStringAsFixed(3)}°N,  ${currentPosition.longitude.toStringAsFixed(3)}°E",
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: MediaQuery.of(context).size.width * 0.01,
+          bottom: MediaQuery.of(context).size.height * 0.5,
+          width: 0.15 * MediaQuery.of(context).size.width,
+          height: 0.15 * MediaQuery.of(context).size.width,
+          child: GestureDetector(
+            onTap: () async {
+              (await mapController.future).animateCamera(
+                  CameraUpdate.newCameraPosition(
+                      CameraPosition(target: initialPosition, zoom: 3.5)));
+            },
+            child: Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    0.15 * MediaQuery.of(context).size.width),
+              ),
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: Text(
+                  "R",
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+        )
+      ],
     );
   }
 
@@ -1605,11 +1666,9 @@ class _GameMapState extends State<GameMap> {
               point.toString(),
             ),
             position: point,
-            infoWindow: InfoWindow(
-                title:
-                    "${point.latitude.toStringAsFixed(3)}°N,  ${point.longitude.toStringAsFixed(3)}°E"),
             icon: pinLocationIcon),
       );
+      currentPosition = point;
     });
   }
 }
