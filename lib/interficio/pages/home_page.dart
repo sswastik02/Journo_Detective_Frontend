@@ -392,7 +392,9 @@ class _HomePageState extends State<HomePage>
                   ),
                 ),
                 clueData["data"] == "finished"
-                    ? Container()
+                    ? Expanded(
+                        child: Container(),
+                      )
                     : Expanded(
                         child: Container(
                           // height: MediaQuery.of(context).size.height / 3,
@@ -583,6 +585,7 @@ class _HomePageState extends State<HomePage>
                       ),
                 Container(
                   padding: const EdgeInsets.all(10),
+                  color: Colors.black,
                   child: const Text(
                     "UNLOCKED CLUES",
                     style: TextStyle(
@@ -596,6 +599,7 @@ class _HomePageState extends State<HomePage>
                   child: Container(
                     // height: MediaQuery.of(context).size.height / 2.5,
                     padding: const EdgeInsets.fromLTRB(0, 25, 0, 0),
+                    color: Colors.black,
                     child: ListView.builder(
                         shrinkWrap: true,
                         physics: const ScrollPhysics(),
@@ -644,13 +648,13 @@ class _HomePageState extends State<HomePage>
                                     children: <Widget>[
                                       Text(
                                         "${unlockedClueData["data"][index][1]} \n",
-                                        style: TextStyle(
-                                            color: const Color(0xFF03A062),
+                                        style: const TextStyle(
+                                            color: Color(0xFF03A062),
                                             fontSize: 20),
                                       ),
                                       Text(
                                         "${unlockedClueData["data"][index][2]}",
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                             color: Colors.white, fontSize: 17),
                                       ),
                                       const SizedBox(
@@ -1607,6 +1611,7 @@ class _GameMapState extends State<GameMap> {
                 child: Text(
                   "${currentPosition.latitude.toStringAsFixed(3)}°N,  ${currentPosition.longitude.toStringAsFixed(3)}°E",
                   textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -1633,6 +1638,7 @@ class _GameMapState extends State<GameMap> {
                 child: Text(
                   "R",
                   textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
