@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:photo_view/photo_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:journo/util/inner_drawer.dart';
+import 'fullscreen_image.dart';
 
 class HomePage extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -121,11 +123,12 @@ class _HomePageState extends State<HomePage>
     });
     print("done");
 
-    unlockedClueData = json.decode(response.body);
-    print("DATA unlockedClue $unlockedClueData");
     setState(() {
+      unlockedClueData = json.decode(response.body);
       _isLoading = false;
     });
+
+    print("DATA unlockedClue $unlockedClueData");
   }
 
   Future getMainQuestion() async {
@@ -202,6 +205,7 @@ class _HomePageState extends State<HomePage>
             "https://$apiUrl/api/unlockclue/?level_no=${levelData["level_no"]}&clue_no=$clueNo"),
         headers: {"Authorization": "Token ${user["token"]}"}).then((onValue) {
       getLevelData();
+      getUnclockedClues();
     });
 
     print(json.decode(response.body));
@@ -381,6 +385,8 @@ class _HomePageState extends State<HomePage>
             child: Column(
               children: <Widget>[
                 Container(
+                  color: Colors.black,
+                  alignment: Alignment.topLeft,
                   padding: const EdgeInsets.all(10),
                   child: const Text(
                     "CURRENT CLUES",
@@ -392,13 +398,12 @@ class _HomePageState extends State<HomePage>
                   ),
                 ),
                 clueData["data"] == "finished"
-                    ? Expanded(
-                        child: Container(),
-                      )
+                    ? Container()
                     : Expanded(
                         child: Container(
                           // height: MediaQuery.of(context).size.height / 3,
                           padding: const EdgeInsets.fromLTRB(0, 25, 0, 0),
+                          color: Colors.black,
                           child: ListView.builder(
                             physics: const ScrollPhysics(),
                             shrinkWrap: true,
@@ -562,10 +567,47 @@ class _HomePageState extends State<HomePage>
                                                 height: 15.0,
                                               ),
                                               clueData["data"][index][4] != null
-                                                  ? Image.network(
-                                                      "https://${apiUrl}${clueData["data"][index][4]}",
-                                                      height: 200.0,
-                                                      fit: BoxFit.cover,
+                                                  ? GestureDetector(
+                                                      onTap: () {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                FullScreenImage(
+                                                              "https://${apiUrl}${clueData["data"][index][4]}",
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                      child: Image.network(
+                                                        "https://${apiUrl}${clueData["data"][index][4]}",
+                                                        height: 200.0,
+                                                        fit: BoxFit.cover,
+                                                        loadingBuilder:
+                                                            (BuildContext
+                                                                    context,
+                                                                Widget child,
+                                                                ImageChunkEvent
+                                                                    loadingProgress) {
+                                                          if (loadingProgress ==
+                                                              null) {
+                                                            return child;
+                                                          }
+                                                          return Center(
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                              value: loadingProgress
+                                                                          .expectedTotalBytes !=
+                                                                      null
+                                                                  ? loadingProgress
+                                                                          .cumulativeBytesLoaded /
+                                                                      loadingProgress
+                                                                          .expectedTotalBytes
+                                                                  : null,
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
                                                     )
                                                   : Container(),
                                             ],
@@ -661,10 +703,45 @@ class _HomePageState extends State<HomePage>
                                         height: 15.0,
                                       ),
                                       unlockedClueData["data"][index][4] != null
-                                          ? Image.network(
-                                              "https://${apiUrl}${unlockedClueData["data"][index][4]}",
-                                              height: 200.0,
-                                              fit: BoxFit.cover,
+                                          ? GestureDetector(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        FullScreenImage(
+                                                      "https://${apiUrl}${unlockedClueData["data"][index][4]}",
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Image.network(
+                                                "https://${apiUrl}${unlockedClueData["data"][index][4]}",
+                                                height: 200.0,
+                                                fit: BoxFit.cover,
+                                                loadingBuilder:
+                                                    (BuildContext context,
+                                                        Widget child,
+                                                        ImageChunkEvent
+                                                            loadingProgress) {
+                                                  if (loadingProgress == null) {
+                                                    return child;
+                                                  }
+                                                  return Center(
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      value: loadingProgress
+                                                                  .expectedTotalBytes !=
+                                                              null
+                                                          ? loadingProgress
+                                                                  .cumulativeBytesLoaded /
+                                                              loadingProgress
+                                                                  .expectedTotalBytes
+                                                          : null,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
                                             )
                                           : Container(),
                                     ],
@@ -1625,8 +1702,10 @@ class _GameMapState extends State<GameMap> {
           child: GestureDetector(
             onTap: () async {
               (await mapController.future).animateCamera(
-                  CameraUpdate.newCameraPosition(
-                      CameraPosition(target: initialPosition, zoom: 3.5)));
+                CameraUpdate.newCameraPosition(
+                  CameraPosition(target: initialPosition, zoom: 3.5),
+                ),
+              );
             },
             child: Card(
               shape: RoundedRectangleBorder(
