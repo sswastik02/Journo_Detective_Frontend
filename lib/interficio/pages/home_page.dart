@@ -20,8 +20,6 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState(user);
 }
 
-Completer<GoogleMapController> mapController = Completer();
-
 String apiUrl = "interficio.herokuapp.com";
 
 bool header = false;
@@ -278,7 +276,7 @@ class _HomePageState extends State<HomePage>
         // fillColor: Colors.white.withOpacity(0.7),
         focusedBorder: OutlineInputBorder(
           borderSide: const BorderSide(
-            color: Color(0xFF03A062), //Color of the border
+            color: Color(0xC0FF9e02), //Color of the border
             style: BorderStyle.solid, //Style of the border
             width: 1, //width of the border
           ),
@@ -286,7 +284,7 @@ class _HomePageState extends State<HomePage>
         ),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(
-            color: Color(0xFF03A062), //Color of the border
+            color: Color(0xC0FF9e02), //Color of the border
             style: BorderStyle.solid, //Style of the border
             width: 1, //width of the border
           ),
@@ -388,13 +386,15 @@ class _HomePageState extends State<HomePage>
                   color: Colors.black,
                   alignment: Alignment.topLeft,
                   padding: const EdgeInsets.all(10),
-                  child: const Text(
-                    "CURRENT CLUES",
-                    style: TextStyle(
-                        fontFamily: "Mysterious",
-                        color: Color(0xFF03A062),
-                        fontSize: 35,
-                        fontWeight: FontWeight.bold),
+                  child: const FittedBox(
+                    child: Text(
+                      "CURRENT CLUES",
+                      style: TextStyle(
+                          fontFamily: "Mysterious",
+                          color: Color(0xFFFF9e02),
+                          fontSize: 35,
+                          fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 clueData["data"] == "finished"
@@ -543,7 +543,8 @@ class _HomePageState extends State<HomePage>
                                       icon: Icon(
                                           clueData["data"][index][2] != null
                                               ? Icons.lock_open
-                                              : Icons.lock),
+                                              : Icons.lock,
+                                          color: Color(0xFFff80a4)),
                                     ),
                                     title: clueData["data"][index][2] != null
                                         ? Column(
@@ -552,14 +553,14 @@ class _HomePageState extends State<HomePage>
                                             children: <Widget>[
                                               Text(
                                                 "${clueData["data"][index][1]}",
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                     color:
-                                                        const Color(0xFF03A062),
+                                                        const Color(0xFFff80a4),
                                                     fontSize: 20.0),
                                               ),
                                               Text(
                                                 "${clueData["data"][index][2]}",
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                     color: Colors.white,
                                                     fontSize: 20.0),
                                               ),
@@ -628,13 +629,15 @@ class _HomePageState extends State<HomePage>
                 Container(
                   padding: const EdgeInsets.all(10),
                   color: Colors.black,
-                  child: const Text(
-                    "UNLOCKED CLUES",
-                    style: TextStyle(
-                        fontFamily: "Mysterious",
-                        color: Color(0xFF03A062),
-                        fontSize: 35,
-                        fontWeight: FontWeight.bold),
+                  child: const FittedBox(
+                    child: Text(
+                      "UNLOCKED CLUES",
+                      style: TextStyle(
+                          fontFamily: "Mysterious",
+                          color: Color(0xFFFF9e02),
+                          fontSize: 35,
+                          fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 Expanded(
@@ -691,7 +694,7 @@ class _HomePageState extends State<HomePage>
                                       Text(
                                         "${unlockedClueData["data"][index][1]} \n",
                                         style: const TextStyle(
-                                            color: Color(0xFF03A062),
+                                            color: Color(0xFFff80a4),
                                             fontSize: 20),
                                       ),
                                       Text(
@@ -769,7 +772,7 @@ class _HomePageState extends State<HomePage>
         ? (_isOpen ? deviceSize.height / 4 : (deviceSize.height * 3 / 4))
         : bottom;
     double top2 =
-        _isUp ? (deviceSize.height - 80) : ((deviceSize.height) / 2) + 10;
+        _isUp ? (deviceSize.height - 90) : ((deviceSize.height) / 2) + 10;
     var bottom3 = _isUp ? deviceSize.height : ((deviceSize.height) / 2) + 10;
     var bottom4 = _isUp ? 10.0 : deviceSize.height - 110;
     var right4 = 20.0;
@@ -796,7 +799,7 @@ class _HomePageState extends State<HomePage>
                               "The Mystery",
                               style: TextStyle(
                                   fontFamily: 'Mysterious',
-                                  color: Colors.red,
+                                  color: Color(0xFFFF9e02),
                                   fontSize: 50),
                             ),
                           ),
@@ -890,7 +893,8 @@ class _HomePageState extends State<HomePage>
 
                 scaffold: Scaffold(
                   key: _scaffoldKey,
-                  resizeToAvoidBottomInset: true,
+                  resizeToAvoidBottomInset: false,
+
                   // drawer: AppBar(automaticallyImplyLeading: false,),
                   body: Stack(
                     children: <Widget>[
@@ -906,7 +910,7 @@ class _HomePageState extends State<HomePage>
                                 : _animationController.reverse();
                           },
                           icon: AnimatedIcon(
-                              color: Colors.white,
+                              color: Color(0xFF420000),
                               progress: _animationController,
                               icon: AnimatedIcons.menu_close),
                         ),
@@ -927,7 +931,7 @@ class _HomePageState extends State<HomePage>
                             child: Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.9),
+                                color: Color(0xFF420000).withOpacity(0.9),
                                 // boxShadow: [
                                 //   BoxShadow(
                                 //       color: Colors.black.withOpacity(0.5),
@@ -957,7 +961,7 @@ class _HomePageState extends State<HomePage>
                                       "INSTRUCTIONS",
                                       style: const TextStyle(
                                           fontFamily: 'Mysterious',
-                                          color: Color(0xFF03A062),
+                                          color: Color(0xFFFF9e02),
                                           fontSize: 40,
                                           fontWeight: FontWeight.bold),
                                     ),
@@ -1023,7 +1027,7 @@ class _HomePageState extends State<HomePage>
                                         blurRadius: 10,
                                         spreadRadius: 5),
                                   ],
-                                  color: const Color(0xFF000000),
+                                  color: const Color(0xFF420000),
                                   borderRadius: BorderRadius.circular(17),
                                 ),
                                 child: Stack(
@@ -1072,7 +1076,7 @@ class _HomePageState extends State<HomePage>
                                                                   'Mysterious',
                                                               color: _isOpen
                                                                   ? const Color(
-                                                                      0xFF03A062)
+                                                                      0xFFFF9e02)
                                                                   : Colors
                                                                       .white,
                                                               fontSize: 30.0,
@@ -1088,11 +1092,7 @@ class _HomePageState extends State<HomePage>
                                                         Text(
                                                           "Level: ${levelData["level_no"]}",
                                                           style: TextStyle(
-                                                            color: _isOpen
-                                                                ? const Color(
-                                                                    0xFFa94064)
-                                                                : const Color(
-                                                                    0xFFa94064),
+                                                            color: Colors.white,
                                                             fontSize: 17,
                                                             fontWeight:
                                                                 FontWeight.bold,
@@ -1137,7 +1137,7 @@ class _HomePageState extends State<HomePage>
                                               Container(
                                                 decoration: BoxDecoration(
                                                   color:
-                                                      const Color(0xFF03A062),
+                                                      const Color(0xC0FF9e02),
                                                   borderRadius:
                                                       BorderRadius.circular(20),
                                                 ),
@@ -1151,13 +1151,11 @@ class _HomePageState extends State<HomePage>
                                                         horizontal: 10),
                                                 child: Text(
                                                   mainQues["data"],
-                                                  style: TextStyle(
-                                                      color: _isOpen
-                                                          ? Colors.white
-                                                          : Colors.white,
-                                                      fontSize: 17,
-                                                      fontStyle:
-                                                          FontStyle.italic),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
                                                 ),
                                               ),
                                               _finalAnswerGiven != null &&
@@ -1216,7 +1214,7 @@ class _HomePageState extends State<HomePage>
                                               Container(
                                                 decoration: BoxDecoration(
                                                   color:
-                                                      const Color(0xFF03A062),
+                                                      const Color(0xFFFF9e02),
                                                   borderRadius:
                                                       BorderRadius.circular(20),
                                                 ),
@@ -1235,8 +1233,8 @@ class _HomePageState extends State<HomePage>
                                                           ? Colors.white
                                                           : Colors.white,
                                                       fontSize: 17,
-                                                      fontStyle:
-                                                          FontStyle.italic),
+                                                      fontWeight:
+                                                          FontWeight.w500),
                                                 ),
                                               ),
                                               ListTile(
@@ -1248,34 +1246,69 @@ class _HomePageState extends State<HomePage>
                                                       const SizedBox(
                                                         height: 20,
                                                       ),
-                                                      const Text(
-                                                        "YOUR CURRENT LOCATION",
-                                                        style: TextStyle(
-                                                          fontFamily:
-                                                              'Mysterious',
-                                                          color: Colors.white,
-                                                          fontSize: 28,
-                                                          // fontWeight:
-                                                          //     FontWeight
-                                                          //         .bold,
+                                                      const FittedBox(
+                                                        child: Text(
+                                                          "YOUR CURRENT LOCATION",
+                                                          maxLines: 1,
+                                                          style: TextStyle(
+                                                            fontFamily:
+                                                                'Mysterious',
+                                                            color: Colors.white,
+                                                            fontSize: 300,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
                                                         ),
                                                       ),
                                                       const SizedBox(
                                                         height: 20,
                                                       ),
                                                       ListTile(
-                                                        leading: const Icon(Icons
-                                                            .subdirectory_arrow_left),
-                                                        title: Text(
-                                                          "LATITUDE:  ${lat.value == 0.0 ? 'None' : lat.value.toStringAsFixed(8) + ' °N'}",
+                                                        leading: const Icon(
+                                                          Icons
+                                                              .subdirectory_arrow_left,
+                                                          color:
+                                                              Color(0xFFff80a4),
+                                                        ),
+                                                        title: Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            const Text(
+                                                              "LATITUDE: ",
+                                                              style: TextStyle(
+                                                                  color: Color(
+                                                                      0xFFff80a4)),
+                                                            ),
+                                                            Text(
+                                                              "${lat.value == 0.0 ? 'None' : lat.value.toStringAsFixed(8) + ' °N'}",
+                                                            )
+                                                          ],
                                                         ),
                                                       ),
                                                       ListTile(
-                                                        leading: const Icon(Icons
-                                                            .subdirectory_arrow_right),
-                                                        title: Text(
-                                                          "LONGITUDE: ${long.value == 0.0 ? 'None' : long.value.toStringAsFixed(8) + ' °E'}",
-                                                          style: TextStyle(),
+                                                        leading: const Icon(
+                                                          Icons
+                                                              .subdirectory_arrow_right,
+                                                          color:
+                                                              Color(0xFFff80a4),
+                                                        ),
+                                                        title: Row(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
+                                                          children: [
+                                                            const Text(
+                                                              "LONGITUDE: ",
+                                                              style: TextStyle(
+                                                                  color: Color(
+                                                                      0xFFff80a4)),
+                                                            ),
+                                                            Text(
+                                                              "${long.value == 0.0 ? 'None' : long.value.toStringAsFixed(8) + ' °E'}",
+                                                            )
+                                                          ],
                                                         ),
                                                       )
                                                     ],
@@ -1286,25 +1319,29 @@ class _HomePageState extends State<HomePage>
                                                 alignment: MainAxisAlignment
                                                     .spaceEvenly,
                                                 children: [
-                                                  OutlineButton(
-                                                    borderSide:
-                                                        const BorderSide(
-                                                      color: Color(
-                                                          0xFF03A062), //Color of the border
-                                                      style: BorderStyle
-                                                          .solid, //Style of the border
-                                                      width:
-                                                          1, //width of the border
-                                                    ),
-                                                    color:
-                                                        const Color(0xFF03A062),
+                                                  TextButton(
+                                                    style: ButtonStyle(
+                                                        padding:
+                                                            MaterialStateProperty
+                                                                .all(EdgeInsets
+                                                                    .all(12)),
+                                                        shape: MaterialStateProperty.all(
+                                                            RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            12))),
+                                                        backgroundColor:
+                                                            MaterialStateProperty.all(
+                                                                Color(0xFF1178d8))),
                                                     child: const Text(
                                                       "GET CLUES",
                                                       style: TextStyle(
+                                                        color: Colors.white,
                                                         fontFamily:
                                                             'Mysterious',
-                                                        // fontWeight:
-                                                        //     FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                         fontSize: 22.0,
                                                       ),
                                                     ),
@@ -1314,24 +1351,39 @@ class _HomePageState extends State<HomePage>
                                                       });
                                                     },
                                                   ),
-                                                  OutlineButton(
-                                                    borderSide:
-                                                        const BorderSide(
-                                                      color: Color(
-                                                          0xFF03A062), //Color of the border
-                                                      style: BorderStyle
-                                                          .solid, //Style of the border
-                                                      width:
-                                                          1, //width of the border
-                                                    ),
+                                                  // borderSide:
+                                                  //       const BorderSide(
+                                                  //     color: Color(
+                                                  //         0xFF03A062), //Color of the border
+                                                  //     style: BorderStyle
+                                                  //         .solid, //Style of the border
+                                                  //     width:
+                                                  //         1, //width of the border
+                                                  //   ),
+                                                  TextButton(
+                                                    style: ButtonStyle(
+                                                        padding:
+                                                            MaterialStateProperty
+                                                                .all(EdgeInsets
+                                                                    .all(12)),
+                                                        shape: MaterialStateProperty.all(
+                                                            RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            12))),
+                                                        backgroundColor:
+                                                            MaterialStateProperty.all(
+                                                                Color(0xFF128000))),
                                                     child: const Text(
                                                       "SUBMIT",
                                                       style: TextStyle(
+                                                        color: Colors.white,
                                                         fontFamily:
                                                             'Mysterious',
-                                                        // fontWeight:
-                                                        //     FontWeight.bold,
-                                                        fontSize: 22.0,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 20.0,
                                                       ),
                                                     ),
                                                     onPressed: () {
@@ -1388,7 +1440,7 @@ class _HomePageState extends State<HomePage>
                                         spreadRadius: 5),
                                   ],
                                   color:
-                                      const Color(0xFF000000).withOpacity(0.7),
+                                      const Color(0xFF420000).withOpacity(0.7),
                                   // gradient: LinearGradient(
                                   //   begin: Alignment.topCenter,
                                   //   end: Alignment.bottomCenter,
@@ -1418,7 +1470,7 @@ class _HomePageState extends State<HomePage>
                                             fontSize: 36.0,
                                             color: _isUp
                                                 ? Colors.white
-                                                : const Color(0xFF03A062),
+                                                : const Color(0xFFFF9e02),
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -1437,16 +1489,14 @@ class _HomePageState extends State<HomePage>
                                               style: TextStyle(
                                                   fontFamily: 'Mysterious',
                                                   fontSize: 28,
-                                                  fontStyle: FontStyle.italic,
-                                                  color: Color(0xFF03A062)),
+                                                  color: Color(0xFFdb1896)),
                                             ),
                                             Text(
                                               "Level",
                                               style: TextStyle(
                                                   fontFamily: 'Mysterious',
                                                   fontSize: 28,
-                                                  fontStyle: FontStyle.italic,
-                                                  color: Color(0xFF03A062)),
+                                                  color: Color(0xFFdb1896)),
                                             )
                                           ],
                                         ),
@@ -1551,7 +1601,7 @@ class _HomePageState extends State<HomePage>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8.0, vertical: 2.5),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Color(0xFF420000).withOpacity(0.3),
                             borderRadius: BorderRadius.circular(10.0),
                           ),
                           // height: 100.0,
@@ -1625,6 +1675,7 @@ class GameMap extends StatefulWidget {
 
 class _GameMapState extends State<GameMap> {
   BitmapDescriptor pinLocationIcon;
+  Completer<GoogleMapController> mapController = Completer();
   final List _markers = [];
   final LatLng initialPosition = const LatLng(39.8283, -98.5795);
   LatLng currentPosition = const LatLng(39.8283, -98.5795);
@@ -1682,7 +1733,7 @@ class _GameMapState extends State<GameMap> {
               borderRadius: BorderRadius.circular(
                   0.15 * MediaQuery.of(context).size.width),
             ),
-            color: Colors.black.withOpacity(0.5),
+            color: Color(0xFF420000).withOpacity(0.5),
             child: Center(
               child: FittedBox(
                 child: Text(
@@ -1712,7 +1763,7 @@ class _GameMapState extends State<GameMap> {
                 borderRadius: BorderRadius.circular(
                     0.15 * MediaQuery.of(context).size.width),
               ),
-              color: Colors.black.withOpacity(0.5),
+              color: Color(0xFF420000).withOpacity(0.5),
               child: const Center(
                 child: Text(
                   "R",
