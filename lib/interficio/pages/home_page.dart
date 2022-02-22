@@ -12,6 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:journo/util/inner_drawer.dart';
 import 'fullscreen_image.dart';
 
+ValueNotifier<bool> updateMap = ValueNotifier(false);
+
 class HomePage extends StatefulWidget {
   final Map<String, dynamic> user;
   HomePage(this.user);
@@ -20,7 +22,7 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState(user);
 }
 
-String apiUrl = "interficio.herokuapp.com";
+String apiUrl = "interficio.nitdgplug.org";
 
 bool header = false;
 bool intro = false;
@@ -36,7 +38,9 @@ class _HomePageState extends State<HomePage>
   var accuracy;
   SharedPreferences _sharedPrefs;
   bool _finalAnswerGiven = false;
-
+  bool _isUp =
+      true; //to maintain state of the animation of leaderboard, instruction sheet
+  List<LatLng> correctLocations = [];
   Map<String, dynamic> levelData = {}; //stores data of current level of user
   Map<String, dynamic> clueData = {};
   Map<String, dynamic> unlockedClueData = {};
@@ -147,6 +151,35 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  Future getCorrectLocations() async {
+    print("getting CORRECT LOCATIONS");
+    http.Response response = await http
+        .get(Uri.parse("https://$apiUrl/api/getanswers/"), headers: {
+      "Authorization": "Token ${user["token"]}",
+      "Content-type": "application/json"
+    });
+    var clocations = json.decode(response.body);
+    print("DATA Correct Locations : $clocations");
+    if (clocations['data'].length == 0) {
+      print("NO CORRECT LOCATIONS");
+      setState(() {
+        correctLocations = [];
+        updateMap.value = true;
+      });
+      return;
+    }
+    setState(() {
+      correctLocations = List<LatLng>.from(
+        clocations['data'].map(
+          (json) =>
+              LatLng(double.parse(json['lat']), double.parse(json['long'])),
+        ),
+      );
+      updateMap.value = true;
+      print(correctLocations);
+    });
+  }
+
   Future submitFinalAnswer(answer) async {
     setState(() {
       _isLoading = true;
@@ -201,7 +234,61 @@ class _HomePageState extends State<HomePage>
     http.Response response = await http.get(
         Uri.parse(
             "https://$apiUrl/api/unlockclue/?level_no=${levelData["level_no"]}&clue_no=$clueNo"),
+        // ignore: missing_return
         headers: {"Authorization": "Token ${user["token"]}"}).then((onValue) {
+      print(onValue.body);
+      var euresponse = json.decode(onValue.body);
+      if (euresponse['data'] == null) {
+        print("EURE NULL");
+        showDialog(
+            context: context,
+            builder: (context) => Dialog(
+                  backgroundColor: Colors.white.withOpacity(0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9e02),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.all(15),
+                    height: 130,
+                    width: MediaQuery.of(context).size.width / 1.5,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: <Widget>[
+                        Text(
+                          "${euresponse['msg']}",
+                          style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.white,
+                              fontFamily: "Gotham"),
+                        ),
+                        TextButton(
+                          style: ButtonStyle(
+                            side: MaterialStateProperty.all(
+                              BorderSide(
+                                color: Colors.white, //Color of the border
+                                style: BorderStyle.solid, //Style of the border
+                                width: 1, //width of the border
+                              ),
+                            ),
+                            backgroundColor:
+                                MaterialStateProperty.all(Color(0xFF420000)),
+                          ),
+                          child: Text(
+                            "GO BACK",
+                            style: TextStyle(
+                                color: Colors.white, fontFamily: 'Gotham'),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context, rootNavigator: true)
+                                .pop(true);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ));
+      }
       getLevelData();
       getUnclockedClues();
     });
@@ -348,7 +435,9 @@ class _HomePageState extends State<HomePage>
     getLevelData().then((val) {
       getScoreboard().then((onValue) {
         getUnclockedClues().then((onValue) {
-          getMainQuestion();
+          getMainQuestion().then((onValue) {
+            getCorrectLocations();
+          });
         });
       });
     });
@@ -366,8 +455,6 @@ class _HomePageState extends State<HomePage>
         direction: InnerDrawerDirection.start);
   }
 
-  bool _isUp =
-      true; //to maintain state of the animation of leaderboard, instruction sheet
   bool _isOpen = false; //to maintain animation of question, answer box
 
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -376,7 +463,9 @@ class _HomePageState extends State<HomePage>
   Widget drawerClues() {
     return _isLoading
         ? Container(
-            child: const CircularProgressIndicator(),
+            child: const CircularProgressIndicator(
+              color: Color(0xFFFF9e02),
+            ),
           )
         : Material(
             color: Colors.white.withOpacity(0),
@@ -390,7 +479,7 @@ class _HomePageState extends State<HomePage>
                     child: Text(
                       "CURRENT CLUES",
                       style: TextStyle(
-                          fontFamily: "Mysterious",
+                          fontFamily: "Gotham",
                           color: Color(0xFFFF9e02),
                           fontSize: 35,
                           fontWeight: FontWeight.bold),
@@ -398,233 +487,291 @@ class _HomePageState extends State<HomePage>
                   ),
                 ),
                 clueData["data"] == "finished"
-                    ? Container()
+                    ? Container(
+                        child: Text(
+                          "No Clues Available",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontFamily: "Montserrat"),
+                        ),
+                      )
                     : Expanded(
-                        child: Container(
-                          // height: MediaQuery.of(context).size.height / 3,
-                          padding: const EdgeInsets.fromLTRB(0, 25, 0, 0),
-                          color: Colors.black,
-                          child: ListView.builder(
-                            physics: const ScrollPhysics(),
-                            shrinkWrap: true,
-                            itemCount: clueData["data"].length ?? 0,
-                            itemBuilder: (BuildContext context, int index) {
-                              return Container(
-                                decoration: const BoxDecoration(
-                                    color: Color(0xFF000000),
-                                    boxShadow: [
-                                      BoxShadow(
-                                          color: Colors.black,
-                                          offset: Offset(2.0, 2.0),
-                                          blurRadius: 10.0,
-                                          spreadRadius: 1.0),
-                                      //   BoxShadow(
-                                      //       color: Colors.white,
-                                      //       offset: Offset(-2.0, -2.0),
-                                      //       blurRadius: 10.0,
-                                      //       spreadRadius: 1.0),
-                                    ],
-                                    borderRadius: BorderRadius.only(
-                                        topRight: Radius.circular(20),
-                                        bottomRight:
-                                            const Radius.circular(20))),
-                                margin:
-                                    const EdgeInsets.fromLTRB(0, 15, 30, 15),
-                                // padding: EdgeInsets.all(10),
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.only(
-                                    topRight: Radius.circular(15.0),
-                                    bottomRight: const Radius.circular(15.0),
-                                  ),
-                                  child: ListTile(
-                                    tileColor: Colors.white.withOpacity(0.2),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 5.0, horizontal: 15),
-                                    leading: IconButton(
-                                      iconSize: 25.0,
-                                      color: clueData["data"][index][2] != null
-                                          ? Colors.green
-                                          : const Color(0xFF03A062),
-                                      onPressed: clueData["data"][index][2] ==
-                                              null
-                                          ? () {
-                                              showDialog(
-                                                context: context,
-                                                builder: (context) => Dialog(
-                                                  backgroundColor: Colors.white
-                                                      .withOpacity(0),
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                          0xFF03A062),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              30),
-                                                    ),
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            15),
-                                                    height: 150,
-                                                    width:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width /
-                                                            1.5,
-                                                    child: Column(
-                                                      children: <Widget>[
-                                                        const Text(
-                                                          "Are you sure you want to unlock this clue?",
-                                                          style: TextStyle(
-                                                              fontSize: 20,
-                                                              color:
-                                                                  Colors.white),
-                                                        ),
-                                                        ButtonBar(
-                                                          children: <Widget>[
-                                                            // ignore: deprecated_member_use
-                                                            OutlineButton(
-                                                              borderSide:
-                                                                  const BorderSide(
-                                                                color: Colors
-                                                                    .white, //Color of the border
-                                                                style: BorderStyle
-                                                                    .solid, //Style of the border
-                                                                width:
-                                                                    1, //width of the border
+                        child: (clueData["data"].length == 0)
+                            ? Container(
+                                child: Text("No Clues Available"),
+                              )
+                            : Container(
+                                // height: MediaQuery.of(context).size.height / 3,
+                                padding: const EdgeInsets.fromLTRB(0, 25, 0, 0),
+                                color: Colors.black,
+                                child: ListView.builder(
+                                  physics: const ScrollPhysics(),
+                                  shrinkWrap: true,
+                                  itemCount: clueData["data"].length ?? 0,
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
+                                    return Container(
+                                      decoration: const BoxDecoration(
+                                          color: Color(0xFF000000),
+                                          boxShadow: [
+                                            BoxShadow(
+                                                color: Colors.black,
+                                                offset: Offset(2.0, 2.0),
+                                                blurRadius: 10.0,
+                                                spreadRadius: 1.0),
+                                            //   BoxShadow(
+                                            //       color: Colors.white,
+                                            //       offset: Offset(-2.0, -2.0),
+                                            //       blurRadius: 10.0,
+                                            //       spreadRadius: 1.0),
+                                          ],
+                                          borderRadius: BorderRadius.only(
+                                              topRight: Radius.circular(20),
+                                              bottomRight:
+                                                  const Radius.circular(20))),
+                                      margin: const EdgeInsets.fromLTRB(
+                                          0, 15, 30, 15),
+                                      // padding: EdgeInsets.all(10),
+                                      child: ClipRRect(
+                                        borderRadius: const BorderRadius.only(
+                                          topRight: Radius.circular(15.0),
+                                          bottomRight:
+                                              const Radius.circular(15.0),
+                                        ),
+                                        child: ListTile(
+                                          tileColor:
+                                              Colors.white.withOpacity(0.2),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  vertical: 5.0,
+                                                  horizontal: 15),
+                                          leading: IconButton(
+                                            iconSize: 25.0,
+                                            color: Colors.white,
+                                            onPressed:
+                                                clueData["data"][index][2] ==
+                                                        null
+                                                    ? () {
+                                                        showDialog(
+                                                          context: context,
+                                                          builder: (context) =>
+                                                              Dialog(
+                                                            backgroundColor:
+                                                                Colors.white
+                                                                    .withOpacity(
+                                                                        0),
+                                                            child: Container(
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: const Color(
+                                                                    0xFFFF9e02),
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            30),
                                                               ),
-                                                              child: Text(
-                                                                "UNLOCK",
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(15),
+                                                              height: 170,
+                                                              width: MediaQuery.of(
+                                                                          context)
+                                                                      .size
+                                                                      .width /
+                                                                  1.5,
+                                                              child: Column(
+                                                                children: <
+                                                                    Widget>[
+                                                                  const Text(
+                                                                    "Are you sure you want to unlock this clue?",
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            20,
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontFamily:
+                                                                            "Gotham"),
+                                                                  ),
+                                                                  ButtonBar(
+                                                                    children: <
+                                                                        Widget>[
+                                                                      // ignore: deprecated_member_use
+                                                                      TextButton(
+                                                                        style:
+                                                                            ButtonStyle(
+                                                                          side:
+                                                                              MaterialStateProperty.all(
+                                                                            BorderSide(
+                                                                              color: Colors.white, //Color of the border
+                                                                              style: BorderStyle.solid, //Style of the border
+                                                                              width: 1, //width of the border
+                                                                            ),
+                                                                          ),
+                                                                          backgroundColor:
+                                                                              MaterialStateProperty.all(Color(0xFF420000)),
+                                                                        ),
+                                                                        child:
+                                                                            Text(
+                                                                          "UNLOCK",
+                                                                          style: TextStyle(
+                                                                              color: Colors.white,
+                                                                              fontFamily: "Gotham"),
+                                                                        ),
+                                                                        onPressed:
+                                                                            () {
+                                                                          setState(
+                                                                              () {
+                                                                            unlockClue(clueData["data"][index][0]);
+                                                                            Navigator.of(context, rootNavigator: true).pop(true);
+                                                                          });
+                                                                        },
+                                                                      ),
+                                                                      TextButton(
+                                                                        style:
+                                                                            ButtonStyle(
+                                                                          side:
+                                                                              MaterialStateProperty.all(
+                                                                            BorderSide(
+                                                                              color: Colors.white, //Color of the border
+                                                                              style: BorderStyle.solid, //Style of the border
+                                                                              width: 1, //width of the border
+                                                                            ),
+                                                                          ),
+                                                                          backgroundColor:
+                                                                              MaterialStateProperty.all(Color(0xFF420000)),
+                                                                        ),
+                                                                        child:
+                                                                            Text(
+                                                                          "GO BACK",
+                                                                          style: TextStyle(
+                                                                              color: Colors.white,
+                                                                              fontFamily: "Gotham"),
+                                                                        ),
+                                                                        onPressed:
+                                                                            () {
+                                                                          Navigator.of(context, rootNavigator: true)
+                                                                              .pop(true);
+                                                                        },
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ],
                                                               ),
-                                                              onPressed: () {
-                                                                setState(() {
-                                                                  unlockClue(clueData[
-                                                                          "data"]
-                                                                      [
-                                                                      index][0]);
-                                                                  Navigator.of(
-                                                                          context,
-                                                                          rootNavigator:
-                                                                              true)
-                                                                      .pop(
-                                                                          true);
-                                                                });
-                                                              },
-                                                            ),
-                                                            OutlineButton(
-                                                              borderSide:
-                                                                  const BorderSide(
-                                                                color: Colors
-                                                                    .white, //Color of the border
-                                                                style: BorderStyle
-                                                                    .solid, //Style of the border
-                                                                width:
-                                                                    1, //width of the border
-                                                              ),
-                                                              child: Text(
-                                                                "GO BACK",
-                                                              ),
-                                                              onPressed: () {
-                                                                Navigator.of(
-                                                                        context,
-                                                                        rootNavigator:
-                                                                            true)
-                                                                    .pop(true);
-                                                              },
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          : () {},
-                                      icon: Icon(
-                                          clueData["data"][index][2] != null
-                                              ? Icons.lock_open
-                                              : Icons.lock,
-                                          color: Color(0xFFff80a4)),
-                                    ),
-                                    title: clueData["data"][index][2] != null
-                                        ? Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: <Widget>[
-                                              Text(
-                                                "${clueData["data"][index][1]}",
-                                                style: const TextStyle(
-                                                    color:
-                                                        const Color(0xFFff80a4),
-                                                    fontSize: 20.0),
-                                              ),
-                                              Text(
-                                                "${clueData["data"][index][2]}",
-                                                style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 20.0),
-                                              ),
-                                              const SizedBox(
-                                                height: 15.0,
-                                              ),
-                                              clueData["data"][index][4] != null
-                                                  ? GestureDetector(
-                                                      onTap: () {
-                                                        Navigator.push(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                            builder: (context) =>
-                                                                FullScreenImage(
-                                                              "https://${apiUrl}${clueData["data"][index][4]}",
                                                             ),
                                                           ),
                                                         );
-                                                      },
-                                                      child: Image.network(
-                                                        "https://${apiUrl}${clueData["data"][index][4]}",
-                                                        height: 200.0,
-                                                        fit: BoxFit.cover,
-                                                        loadingBuilder:
-                                                            (BuildContext
-                                                                    context,
-                                                                Widget child,
-                                                                ImageChunkEvent
-                                                                    loadingProgress) {
-                                                          if (loadingProgress ==
-                                                              null) {
-                                                            return child;
-                                                          }
-                                                          return Center(
-                                                            child:
-                                                                CircularProgressIndicator(
-                                                              value: loadingProgress
-                                                                          .expectedTotalBytes !=
-                                                                      null
-                                                                  ? loadingProgress
-                                                                          .cumulativeBytesLoaded /
-                                                                      loadingProgress
-                                                                          .expectedTotalBytes
-                                                                  : null,
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    )
-                                                  : Container(),
-                                            ],
-                                          )
-                                        : Text(
-                                            clueData["data"][index][1],
-                                            style: TextStyle(
-                                                color: const Color(0xFF03A062),
-                                                fontSize: 20),
+                                                      }
+                                                    : () {},
+                                            icon: Icon(
+                                                clueData["data"][index][2] !=
+                                                        null
+                                                    ? Icons.lock_open
+                                                    : Icons.lock,
+                                                color: clueData["data"][index]
+                                                            [2] !=
+                                                        null
+                                                    ? Color(0xFF03A062)
+                                                    : Color(0xFFdb1896)),
                                           ),
-                                  ),
+                                          title: clueData["data"][index][2] !=
+                                                  null
+                                              ? Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: <Widget>[
+                                                    Text(
+                                                      "${clueData["data"][index][1]}",
+                                                      style: TextStyle(
+                                                        color: clueData["data"]
+                                                                        [index]
+                                                                    [2] !=
+                                                                null
+                                                            ? Color(0xFF03A062)
+                                                            : Color(0xFFdb1896),
+                                                        fontSize: 20.0,
+                                                        fontFamily:
+                                                            'Montserrat',
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      "${clueData["data"][index][2]}",
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 20.0,
+                                                        fontFamily:
+                                                            'Montserrat',
+                                                      ),
+                                                    ),
+                                                    const SizedBox(
+                                                      height: 15.0,
+                                                    ),
+                                                    clueData["data"][index]
+                                                                [4] !=
+                                                            null
+                                                        ? GestureDetector(
+                                                            onTap: () {
+                                                              Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                  builder:
+                                                                      (context) =>
+                                                                          FullScreenImage(
+                                                                    "https://${apiUrl}${clueData["data"][index][4]}",
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            },
+                                                            child:
+                                                                Image.network(
+                                                              "https://${apiUrl}${clueData["data"][index][4]}",
+                                                              height: 200.0,
+                                                              fit: BoxFit.cover,
+                                                              loadingBuilder:
+                                                                  (BuildContext
+                                                                          context,
+                                                                      Widget
+                                                                          child,
+                                                                      ImageChunkEvent
+                                                                          loadingProgress) {
+                                                                if (loadingProgress ==
+                                                                    null) {
+                                                                  return child;
+                                                                }
+                                                                return Center(
+                                                                  child:
+                                                                      CircularProgressIndicator(
+                                                                    color: Color(
+                                                                        0xFFFF9e02),
+                                                                    value: loadingProgress.expectedTotalBytes !=
+                                                                            null
+                                                                        ? loadingProgress.cumulativeBytesLoaded /
+                                                                            loadingProgress.expectedTotalBytes
+                                                                        : null,
+                                                                  ),
+                                                                );
+                                                              },
+                                                            ),
+                                                          )
+                                                        : Container(),
+                                                  ],
+                                                )
+                                              : Text(
+                                                  clueData["data"][index][1],
+                                                  style: TextStyle(
+                                                      color: clueData["data"]
+                                                                  [index][2] !=
+                                                              null
+                                                          ? Color(0xFF03A062)
+                                                          : Color(0xFFdb1896),
+                                                      fontSize: 20),
+                                                ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        ),
+                              ),
                       ),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -633,7 +780,7 @@ class _HomePageState extends State<HomePage>
                     child: Text(
                       "UNLOCKED CLUES",
                       style: TextStyle(
-                          fontFamily: "Mysterious",
+                          fontFamily: "Gotham",
                           color: Color(0xFFFF9e02),
                           fontSize: 35,
                           fontWeight: FontWeight.bold),
@@ -689,18 +836,25 @@ class _HomePageState extends State<HomePage>
                                   // ),
                                   title: Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        CrossAxisAlignment.center,
                                     children: <Widget>[
                                       Text(
                                         "${unlockedClueData["data"][index][1]} \n",
-                                        style: const TextStyle(
-                                            color: Color(0xFFff80a4),
-                                            fontSize: 20),
+                                        style: TextStyle(
+                                            color: unlockedClueData["data"]
+                                                        [index][2] !=
+                                                    null
+                                                ? Color(0xFF03A062)
+                                                : Color(0xFFdb1896),
+                                            fontSize: 20,
+                                            fontFamily: 'Montserrat'),
                                       ),
                                       Text(
                                         "${unlockedClueData["data"][index][2]}",
                                         style: const TextStyle(
-                                            color: Colors.white, fontSize: 17),
+                                            color: Colors.white,
+                                            fontSize: 17,
+                                            fontFamily: 'Montserrat'),
                                       ),
                                       const SizedBox(
                                         height: 15.0,
@@ -733,6 +887,7 @@ class _HomePageState extends State<HomePage>
                                                   return Center(
                                                     child:
                                                         CircularProgressIndicator(
+                                                      color: Color(0xFFFF9e02),
                                                       value: loadingProgress
                                                                   .expectedTotalBytes !=
                                                               null
@@ -752,8 +907,9 @@ class _HomePageState extends State<HomePage>
                                 ),
                               ),
                             );
-                          } else
+                          } else {
                             return Container();
+                          }
                         }),
                   ),
                 ),
@@ -898,7 +1054,10 @@ class _HomePageState extends State<HomePage>
                   // drawer: AppBar(automaticallyImplyLeading: false,),
                   body: Stack(
                     children: <Widget>[
-                      const GameMap(),
+                      GameMap(
+                        isUp: _isUp,
+                        correctLocations: correctLocations,
+                      ),
                       Padding(
                         padding: const EdgeInsets.all(15),
                         child: IconButton(
@@ -960,7 +1119,7 @@ class _HomePageState extends State<HomePage>
                                     const Text(
                                       "INSTRUCTIONS",
                                       style: const TextStyle(
-                                          fontFamily: 'Mysterious',
+                                          fontFamily: 'Gotham',
                                           color: Color(0xFFFF9e02),
                                           fontSize: 40,
                                           fontWeight: FontWeight.bold),
@@ -969,8 +1128,12 @@ class _HomePageState extends State<HomePage>
                                       height: 15,
                                     ),
                                     Text(
-                                      "The rules of Journo Detective are as follows: \n\n\n 1) Participants need to solve a murder mystery with the help of an available storyline and clues provided to them.\n\n 2) Each level comprises of a clue to the next location at which the participant can move to the next level. The location can be selected by tapping on the corresponding region on the map, following which a Marker is placed there. Once the Marker is placed, click on submit. If you are at the right location, you progress to the next level.\n\n 3) At every level, there will be a set of clues. You can unlock clues as you desire at a particular location.\n\n 4) A clue that has not been unlocked cannot be unlocked once you pass that level.\n\n 5) The final level requires you to write the name of the criminal with a justification for the same.\n\n 6) The dynamic scoreboard will be based on the level a participant is at and the time he/she takes to reach there.\n\n 7) The final standing will be subjected to three parameters: The correct answer and justification, time taken and number of clues unlocked to come to a conclusion.",
-                                      style: TextStyle(fontSize: 17),
+                                      "The rules of Journo Detective are as follows: \n\n\n 1) Participants need to solve a murder mystery with the help of an available storyline and clues provided to them.\n\n 2) Each level comprises of a clue to the next location at which the participant can move to the next level.\n\n 3) The location can be selected by tapping on the corresponding region on the map, following which a Marker is placed there. Once the Marker is placed, click on submit. If you are at the right location, you progress to the next level.\n\n 4) At every level, there will be a set of clues. You can unlock clues as you desire at a particular location.\n\n 5) A clue that has not been unlocked cannot be unlocked once you pass that level.\n\n 6) The final level requires you to write the name of the criminal with a justification for the same.\n\n 7) The dynamic scoreboard will be based on the level a participant is at and the time he/she takes to reach there.\n\n 8) The final standing will be subjected to three parameters: The correct answer and justification, time taken and number of clues unlocked to come to a conclusion.",
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontFamily: "Montserrat",
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                     const SizedBox(
                                       height: 15,
@@ -978,8 +1141,8 @@ class _HomePageState extends State<HomePage>
                                     const Text(
                                       "The Mystery",
                                       style: TextStyle(
-                                          fontFamily: 'Mysterious',
-                                          color: Colors.red,
+                                          fontFamily: 'Gotham',
+                                          color: Color(0xFFFF9e02),
                                           fontSize: 32.0),
                                     ),
                                     const SizedBox(
@@ -1042,7 +1205,9 @@ class _HomePageState extends State<HomePage>
                                                   right: 20),
                                               child: const Center(
                                                   child:
-                                                      CircularProgressIndicator()))
+                                                      CircularProgressIndicator(
+                                                color: Color(0xFFFF9e02),
+                                              )))
                                           : levelData["level"] == "ALLDONE"
                                               ? const Center(
                                                   child: Text(
@@ -1073,7 +1238,7 @@ class _HomePageState extends State<HomePage>
                                                             "${levelData["title"]}  🚩",
                                                             style: TextStyle(
                                                               fontFamily:
-                                                                  'Mysterious',
+                                                                  'Gotham',
                                                               color: _isOpen
                                                                   ? const Color(
                                                                       0xFFFF9e02)
@@ -1094,6 +1259,8 @@ class _HomePageState extends State<HomePage>
                                                           style: TextStyle(
                                                             color: Colors.white,
                                                             fontSize: 17,
+                                                            fontFamily:
+                                                                "LemonMilk",
                                                             fontWeight:
                                                                 FontWeight.bold,
                                                           ),
@@ -1229,12 +1396,13 @@ class _HomePageState extends State<HomePage>
                                                 child: Text(
                                                   '${levelData["ques"]}',
                                                   style: TextStyle(
-                                                      color: _isOpen
-                                                          ? Colors.white
-                                                          : Colors.white,
-                                                      fontSize: 17,
-                                                      fontWeight:
-                                                          FontWeight.w500),
+                                                    color: _isOpen
+                                                        ? Colors.white
+                                                        : Colors.white,
+                                                    fontSize: 17,
+                                                    fontFamily: 'Montserrat',
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                               ),
                                               ListTile(
@@ -1252,7 +1420,7 @@ class _HomePageState extends State<HomePage>
                                                           maxLines: 1,
                                                           style: TextStyle(
                                                             fontFamily:
-                                                                'Mysterious',
+                                                                'Gotham',
                                                             color: Colors.white,
                                                             fontSize: 300,
                                                             fontWeight:
@@ -1270,21 +1438,32 @@ class _HomePageState extends State<HomePage>
                                                           color:
                                                               Color(0xFFff80a4),
                                                         ),
-                                                        title: Row(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .spaceBetween,
-                                                          children: [
-                                                            const Text(
-                                                              "LATITUDE: ",
-                                                              style: TextStyle(
+                                                        title: FittedBox(
+                                                          child: Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              const Text(
+                                                                "LATITUDE:  ",
+                                                                style:
+                                                                    TextStyle(
                                                                   color: Color(
-                                                                      0xFFff80a4)),
-                                                            ),
-                                                            Text(
-                                                              "${lat.value == 0.0 ? 'None' : lat.value.toStringAsFixed(8) + ' °N'}",
-                                                            )
-                                                          ],
+                                                                      0xFFff80a4),
+                                                                  fontFamily:
+                                                                      "LemonMilk",
+                                                                ),
+                                                              ),
+                                                              Text(
+                                                                "${lat.value == 0.0 ? 'None' : lat.value.toStringAsFixed(5) + ' °N'}",
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontFamily:
+                                                                      "LemonMilk",
+                                                                ),
+                                                              )
+                                                            ],
+                                                          ),
                                                         ),
                                                       ),
                                                       ListTile(
@@ -1294,105 +1473,120 @@ class _HomePageState extends State<HomePage>
                                                           color:
                                                               Color(0xFFff80a4),
                                                         ),
-                                                        title: Row(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .spaceBetween,
-                                                          children: [
-                                                            const Text(
-                                                              "LONGITUDE: ",
-                                                              style: TextStyle(
+                                                        title: FittedBox(
+                                                          child: Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              const Text(
+                                                                "LONGITUDE: ",
+                                                                style:
+                                                                    TextStyle(
                                                                   color: Color(
-                                                                      0xFFff80a4)),
-                                                            ),
-                                                            Text(
-                                                              "${long.value == 0.0 ? 'None' : long.value.toStringAsFixed(8) + ' °E'}",
-                                                            )
-                                                          ],
+                                                                      0xFFff80a4),
+                                                                  fontFamily:
+                                                                      "LemonMilk",
+                                                                ),
+                                                              ),
+                                                              Text(
+                                                                "${long.value == 0.0 ? 'None' : long.value.toStringAsFixed(5) + ' °E'}",
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontFamily:
+                                                                      "LemonMilk",
+                                                                ),
+                                                              )
+                                                            ],
+                                                          ),
                                                         ),
                                                       )
                                                     ],
                                                   ),
                                                 ),
                                               ),
-                                              ButtonBar(
-                                                alignment: MainAxisAlignment
-                                                    .spaceEvenly,
-                                                children: [
-                                                  TextButton(
-                                                    style: ButtonStyle(
-                                                        padding:
-                                                            MaterialStateProperty
-                                                                .all(EdgeInsets
-                                                                    .all(12)),
-                                                        shape: MaterialStateProperty.all(
-                                                            RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            12))),
-                                                        backgroundColor:
-                                                            MaterialStateProperty.all(
-                                                                Color(0xFF1178d8))),
-                                                    child: const Text(
-                                                      "GET CLUES",
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontFamily:
-                                                            'Mysterious',
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 22.0,
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    top: 20.0),
+                                                child: ButtonBar(
+                                                  alignment: MainAxisAlignment
+                                                      .spaceEvenly,
+                                                  children: [
+                                                    TextButton(
+                                                      style: ButtonStyle(
+                                                          padding:
+                                                              MaterialStateProperty
+                                                                  .all(EdgeInsets
+                                                                      .all(12)),
+                                                          shape: MaterialStateProperty.all(
+                                                              RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                          12))),
+                                                          backgroundColor:
+                                                              MaterialStateProperty
+                                                                  .all(Color(
+                                                                      0xFF1178d8))),
+                                                      child: const Text(
+                                                        "GET CLUES",
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontFamily: 'Gotham',
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 22.0,
+                                                        ),
                                                       ),
+                                                      onPressed: () {
+                                                        setState(() {
+                                                          _toggle();
+                                                        });
+                                                      },
                                                     ),
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        _toggle();
-                                                      });
-                                                    },
-                                                  ),
-                                                  // borderSide:
-                                                  //       const BorderSide(
-                                                  //     color: Color(
-                                                  //         0xFF03A062), //Color of the border
-                                                  //     style: BorderStyle
-                                                  //         .solid, //Style of the border
-                                                  //     width:
-                                                  //         1, //width of the border
-                                                  //   ),
-                                                  TextButton(
-                                                    style: ButtonStyle(
-                                                        padding:
-                                                            MaterialStateProperty
-                                                                .all(EdgeInsets
-                                                                    .all(12)),
-                                                        shape: MaterialStateProperty.all(
-                                                            RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            12))),
-                                                        backgroundColor:
-                                                            MaterialStateProperty.all(
-                                                                Color(0xFF128000))),
-                                                    child: const Text(
-                                                      "SUBMIT",
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontFamily:
-                                                            'Mysterious',
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 20.0,
+                                                    // borderSide:
+                                                    //       const BorderSide(
+                                                    //     color: Color(
+                                                    //         0xFF03A062), //Color of the border
+                                                    //     style: BorderStyle
+                                                    //         .solid, //Style of the border
+                                                    //     width:
+                                                    //         1, //width of the border
+                                                    //   ),
+                                                    TextButton(
+                                                      style: ButtonStyle(
+                                                          padding:
+                                                              MaterialStateProperty
+                                                                  .all(EdgeInsets
+                                                                      .all(12)),
+                                                          shape: MaterialStateProperty.all(
+                                                              RoundedRectangleBorder(
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                          12))),
+                                                          backgroundColor:
+                                                              MaterialStateProperty
+                                                                  .all(Color(
+                                                                      0xFF128000))),
+                                                      child: const Text(
+                                                        "SUBMIT",
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontFamily: 'Gotham',
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 22.0,
+                                                        ),
                                                       ),
+                                                      onPressed: () {
+                                                        setState(() {
+                                                          submitLocation().then(
+                                                              (onValue) =>
+                                                                  getCorrectLocations());
+                                                        });
+                                                      },
                                                     ),
-                                                    onPressed: () {
-                                                      setState(() {
-                                                        submitLocation();
-                                                      });
-                                                    },
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -1466,7 +1660,7 @@ class _HomePageState extends State<HomePage>
                                         child: Text(
                                           "LEADERBOARD",
                                           style: TextStyle(
-                                            fontFamily: "Mysterious",
+                                            fontFamily: "Gotham",
                                             fontSize: 36.0,
                                             color: _isUp
                                                 ? Colors.white
@@ -1485,17 +1679,17 @@ class _HomePageState extends State<HomePage>
                                           children: const <Widget>[
                                             // SizedBox(width: 40),
                                             Text(
-                                              "Name",
+                                              "NAME",
                                               style: TextStyle(
-                                                  fontFamily: 'Mysterious',
-                                                  fontSize: 28,
+                                                  fontFamily: 'Gotham',
+                                                  fontSize: 23,
                                                   color: Color(0xFFdb1896)),
                                             ),
                                             Text(
-                                              "Level",
+                                              "LEVEL",
                                               style: TextStyle(
-                                                  fontFamily: 'Mysterious',
-                                                  fontSize: 28,
+                                                  fontFamily: 'Gotham',
+                                                  fontSize: 23,
                                                   color: Color(0xFFdb1896)),
                                             )
                                           ],
@@ -1511,7 +1705,7 @@ class _HomePageState extends State<HomePage>
                                                 MainAxisAlignment.start,
                                             children: <Widget>[
                                               Text(
-                                                "${index - 1}",
+                                                "${index - 1}.",
                                                 style: TextStyle(
                                                     fontSize: 23,
                                                     fontWeight:
@@ -1524,6 +1718,7 @@ class _HomePageState extends State<HomePage>
                                                 leaderboard[index - 2]["name"],
                                                 style: TextStyle(
                                                     fontSize: 23,
+                                                    fontFamily: "GLITCH",
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
@@ -1597,63 +1792,40 @@ class _HomePageState extends State<HomePage>
                       Positioned(
                         top: 25.0,
                         right: 15.0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0, vertical: 2.5),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF420000).withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          // height: 100.0,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    print("he");
-                                    _isUp = !_isUp;
-                                    getScoreboard();
-                                  });
-                                },
-                                // onVerticalDragStart: (context) {
-                                //   setState(() {
-                                //     print("he");
-                                //     _isUp = !_isUp;
-                                //     getScoreboard();
-                                //   });
-                                // },
-                                child: const Icon(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              print("he");
+                              _isUp = !_isUp;
+                              getScoreboard();
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: Color(0xFF420000).withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            // height: 100.0,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                const Icon(
                                   Icons.info,
                                   color: Colors.white,
                                   size: 40,
                                 ),
-                              ),
-                              const SizedBox(
-                                height: 20.0,
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    print("he");
-                                    _isUp = !_isUp;
-                                    getScoreboard();
-                                  });
-                                },
-                                // onVerticalDragStart: (context) {
-                                //   setState(() {
-                                //     print("he");
-                                //     _isUp = !_isUp;
-                                //     getScoreboard();
-                                //   });
-                                // },
-                                child: const Icon(
+                                const SizedBox(
+                                  height: 20.0,
+                                ),
+                                const Icon(
                                   Icons.assessment,
                                   color: Colors.white,
                                   size: 40,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1667,7 +1839,10 @@ class _HomePageState extends State<HomePage>
 }
 
 class GameMap extends StatefulWidget {
-  const GameMap({Key key}) : super(key: key);
+  bool isUp;
+  List<LatLng> correctLocations;
+
+  GameMap({Key key, this.isUp, this.correctLocations}) : super(key: key);
 
   @override
   _GameMapState createState() => _GameMapState();
@@ -1676,11 +1851,29 @@ class GameMap extends StatefulWidget {
 class _GameMapState extends State<GameMap> {
   BitmapDescriptor pinLocationIcon;
   Completer<GoogleMapController> mapController = Completer();
-  final List _markers = [];
+  List _markers = [];
   final LatLng initialPosition = const LatLng(39.8283, -98.5795);
   LatLng currentPosition = const LatLng(39.8283, -98.5795);
-  @override
+
+  void updateCorrectLocationsMarkers() {
+    print("UPDATE");
+    print(widget.correctLocations);
+    BitmapDescriptor.fromAssetImage(ImageConfiguration(devicePixelRatio: 2.5),
+            'assets/correct_detective.png')
+        .then((pin) {
+      for (int i = 0; i < widget.correctLocations.length; i++) {
+        _markers.add(Marker(
+            markerId: MarkerId(
+              "Correct Location $i",
+            ),
+            position: widget.correctLocations[i],
+            icon: pin));
+      }
+    });
+  }
+
   void initState() {
+    updateCorrectLocationsMarkers();
     BitmapDescriptor.fromAssetImage(
             ImageConfiguration(devicePixelRatio: 2.5), 'assets/detective.png')
         .then((pin) {
@@ -1698,11 +1891,26 @@ class _GameMapState extends State<GameMap> {
             icon: pin),
       );
     });
+    updateMap.addListener(listenerFunction);
     super.initState();
+  }
+
+  void listenerFunction() async {
+    print("Listener Working");
+    if (updateMap.value) {
+      print("Listener true");
+      (await mapController.future).animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(target: initialPosition, zoom: 3.45)));
+      updateMap.value = false;
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    print("LOCATIONS PASSED");
+    print(widget.correctLocations);
+
     return Stack(
       children: [
         GoogleMap(
@@ -1723,17 +1931,20 @@ class _GameMapState extends State<GameMap> {
             });
           },
         ),
-        Positioned(
+        AnimatedPositioned(
+          duration: Duration(milliseconds: 500),
           width: 0.5 * MediaQuery.of(context).size.width,
           height: 0.15 * MediaQuery.of(context).size.width,
           left: 0.25 * (MediaQuery.of(context).size.width),
-          top: 0.1 * (MediaQuery.of(context).size.height),
-          child: Card(
-            shape: RoundedRectangleBorder(
+          top: (!widget.isUp)
+              ? -0.3 * MediaQuery.of(context).size.width
+              : 0.1 * (MediaQuery.of(context).size.height),
+          child: Container(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(
                   0.15 * MediaQuery.of(context).size.width),
+              color: Color(0xFF420000).withOpacity(0.5),
             ),
-            color: Color(0xFF420000).withOpacity(0.5),
             child: Center(
               child: FittedBox(
                 child: Text(
@@ -1745,12 +1956,16 @@ class _GameMapState extends State<GameMap> {
             ),
           ),
         ),
-        Positioned(
-          right: MediaQuery.of(context).size.width * 0.01,
+        AnimatedPositioned(
+          duration: Duration(milliseconds: 500),
+          right: (!widget.isUp)
+              ? -0.2 * MediaQuery.of(context).size.width
+              : MediaQuery.of(context).size.width * 0.01,
           bottom: MediaQuery.of(context).size.height * 0.5,
           width: 0.15 * MediaQuery.of(context).size.width,
           height: 0.15 * MediaQuery.of(context).size.width,
           child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
             onTap: () async {
               (await mapController.future).animateCamera(
                 CameraUpdate.newCameraPosition(
@@ -1758,12 +1973,12 @@ class _GameMapState extends State<GameMap> {
                 ),
               );
             },
-            child: Card(
-              shape: RoundedRectangleBorder(
+            child: Container(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(
                     0.15 * MediaQuery.of(context).size.width),
+                color: Color(0xFF420000).withOpacity(0.5),
               ),
-              color: Color(0xFF420000).withOpacity(0.5),
               child: const Center(
                 child: Text(
                   "R",
@@ -1792,7 +2007,8 @@ class _GameMapState extends State<GameMap> {
   }
 
   void _handleTap(LatLng point) {
-    if (_markers.isNotEmpty) _markers.removeLast();
+    if (_markers.isNotEmpty) _markers = [];
+    updateCorrectLocationsMarkers();
     setState(() {
       lat.value = point.latitude;
       long.value = point.longitude;

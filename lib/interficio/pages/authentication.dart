@@ -42,7 +42,7 @@ class _AuthPageState extends State<AuthPage> {
 
   bool _isLoading = false;
 
-  String api_url = "interficio.herokuapp.com";
+  String apiUrl = "interficio.nitdgplug.org";
 
   AuthMode _authmode = AuthMode.login;
 
@@ -58,7 +58,7 @@ class _AuthPageState extends State<AuthPage> {
     });
     print(_loginFormData);
     http.Response response = await http.post(
-        Uri.parse("https://$api_url/api/auth/login/"),
+        Uri.parse("https://$apiUrl/api/auth/login/"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(_loginFormData));
     print("sgrgeg${response.body}");
@@ -111,7 +111,7 @@ class _AuthPageState extends State<AuthPage> {
       _isLoading = true;
     });
     http.Response response = await http.post(
-        Uri.parse("https://$api_url/api/auth/register/"),
+        Uri.parse("https://$apiUrl/api/auth/register/"),
         headers: {"Content-Type": "application/json"},
         body: json.encode(_registerFormData));
     var data = json.decode(response.body);
